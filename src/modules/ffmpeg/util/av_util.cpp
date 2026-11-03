@@ -353,7 +353,6 @@ std::shared_ptr<AVFrame> make_av_video_frame(const core::const_frame& frame, con
 
     // TODO (perf) Avoid extra memcpy.
     for (int n = 0; n < planes.size(); ++n) {
-        // A frame mixed for GPU-only consumers has no bytes on the host (output.cpp keeps it away from us).
         if (frame.image_data(n).data() == nullptr) {
             CASPAR_THROW_EXCEPTION(caspar::invalid_argument() << msg_info("video frame without host image data"));
         }
