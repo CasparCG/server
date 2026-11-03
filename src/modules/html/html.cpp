@@ -242,6 +242,12 @@ class renderer_application
         command_line->AppendSwitch("disable-component-update");
         command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
 
+        // On Linux, Chromium waits for the desktop keyring (Secret Service over D-Bus) before it starts any network
+        // request, as it needs the key to read and write cookies. On a playout server nobody can answer the keyring's
+        // unlock prompt, so http(s) templates never load. CasparCG doesn't need encrypted cookies, so store the key in
+        // plain text instead.
+        command_line->AppendSwitchWithValue("password-store", "basic");
+
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
             // smoothly
