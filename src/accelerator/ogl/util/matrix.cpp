@@ -34,11 +34,14 @@ t_matrix create_matrix(std::vector<std::vector<double>> data)
     return matrix;
 }
 
-t_matrix get_vertex_matrix(const core::image_transform& transform, double aspect_ratio)
+t_matrix get_pre_matrix(const core::image_transform& transform)
+{
+    return create_matrix({{1.0, 0.0, -transform.anchor[0]}, {0.0, 1.0, -transform.anchor[1]}, {0.0, 0.0, 1.0}});
+}
+
+t_matrix get_post_matrix(const core::image_transform& transform, double aspect_ratio)
 {
     using namespace boost::numeric::ublas;
-    auto anchor_matrix =
-        create_matrix({{1.0, 0.0, -transform.anchor[0]}, {0.0, 1.0, -transform.anchor[1]}, {0.0, 0.0, 1.0}});
     auto scale_matrix =
         create_matrix({{transform.fill_scale[0], 0.0, 0.0}, {0.0, transform.fill_scale[1], 0.0}, {0.0, 0.0, 1.0}});
     auto aspect_matrix      = create_matrix({{1.0, 0.0, 0.0}, {0.0, 1.0 / aspect_ratio, 0.0}, {0.0, 0.0, 1.0}});
@@ -49,7 +52,12 @@ t_matrix get_vertex_matrix(const core::image_transform& transform, double aspect
     auto translation_matrix = create_matrix(
         {{1.0, 0.0, transform.fill_translation[0]}, {0.0, 1.0, transform.fill_translation[1]}, {0.0, 0.0, 1.0}});
 
-    return anchor_matrix * aspect_matrix * scale_matrix * rotation_matrix * aspect_inv_matrix * translation_matrix;
+    return aspect_matrix * scale_matrix * rotation_matrix * aspect_inv_matrix * translation_matrix;
+}
+
+t_matrix get_vertex_matrix(const core::image_transform& transform, double aspect_ratio)
+{
+    return get_pre_matrix(transform) * get_post_matrix(transform, aspect_ratio);
 }
 
 } // namespace caspar::accelerator::ogl
