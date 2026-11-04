@@ -242,10 +242,11 @@ class renderer_application
         command_line->AppendSwitch("disable-component-update");
         command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
 
-        // On Linux, Chromium waits for the desktop keyring (Secret Service over D-Bus) before it starts any network
-        // request, as it needs the key to read and write cookies. On a playout server nobody can answer the keyring's
-        // unlock prompt, so http(s) templates never load. Use the basic password store instead. Its key is hardcoded,
-        // so cookies in the profile are only obfuscated, not protected, which is fine for the cookies templates set.
+        // On Linux, Chromium waits for the desktop keyring (Secret Service over D-Bus) for the key it uses to read and
+        // write cookies. That holds back the first http(s) template until about 25 s after startup, and if the keyring
+        // is locked and shows an unlock prompt, the server never finishes starting. Use the basic password store
+        // instead. Its key is hardcoded, so cookies in the profile are only obfuscated, not protected, which is fine
+        // for the cookies templates set.
         command_line->AppendSwitchWithValue("password-store", "basic");
 
         if (process_type.empty() && !enable_gpu_) {
