@@ -55,7 +55,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <limits>
+#include <optional>
 #include <thread>
 
 #if defined(_MSC_VER)
@@ -102,7 +104,9 @@ struct screen_consumer_vk
     std::atomic<bool> is_running_{true};
     std::atomic<bool> needs_resize_{false};
     std::atomic<bool> first_frame_presented_{false};
-    std::thread       thread_;
+    // Render thread only.
+    std::optional<std::chrono::steady_clock::time_point> last_present_;
+    std::thread                                          thread_;
 
     screen_consumer_vk(const screen_consumer_vk&)            = delete;
     screen_consumer_vk& operator=(const screen_consumer_vk&) = delete;
@@ -128,7 +132,8 @@ struct screen_consumer_vk
             }
         }
 
-        frame_buffer_.set_capacity(1);
+        // Both fields of a tick arrive together.
+        frame_buffer_.set_capacity(format_desc_.field_count);
 
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -316,6 +321,12 @@ struct screen_consumer_vk
         if (!in_frame || !is_running_)
             return;
 
+        // Spread the fields over the frame.
+        if (last_present_) {
+            const auto field_period = std::chrono::microseconds(static_cast<int64_t>(1e6 / format_desc_.fps));
+            std::this_thread::sleep_until(*last_present_ + field_period * 6 / 10);
+        }
+
         if (window_->poll())
             is_running_ = false;
         handle_resize();
@@ -364,6 +375,7 @@ struct screen_consumer_vk
 
             if (!swapchain_->present(image_index))
                 needs_resize_ = true;
+            last_present_ = std::chrono::steady_clock::now();
 
             swapchain_->next_frame();
         }
