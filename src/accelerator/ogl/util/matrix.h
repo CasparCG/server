@@ -13,6 +13,8 @@ typedef boost::numeric::ublas::matrix<double, boost::numeric::ublas::row_major, 
 
 typedef boost::numeric::ublas::vector<double, std::vector<double>> t_point;
 
+t_matrix get_pre_matrix(const core::image_transform& transform);
+t_matrix get_post_matrix(const core::image_transform& transform, double aspect_ratio);
 t_matrix get_vertex_matrix(const core::image_transform& transform, double aspect_ratio);
 
 } // namespace caspar::accelerator::ogl
