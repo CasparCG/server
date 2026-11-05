@@ -78,21 +78,39 @@ bool is_default_perspective(const core::corners& perspective)
            perspective.ll[0] == 0 && perspective.ll[1] == 1 && perspective.lr[0] == 1 && perspective.lr[1] == 1;
 }
 
+void draw_transforms::apply_scale_mode(double scale_x, double scale_y)
+{
+    t_matrix scale = boost::numeric::ublas::identity_matrix<double>(3, 3);
+    scale(0, 0) = scale_x;
+    scale(1, 1) = scale_y;
+
+    if (scale_mode_index < 0) {
+        // There is no layer transform, add it as a first step.
+        steps.emplace_back(core::corners{}, scale);
+        scale_mode_index = steps.size() - 1;
+    } else {
+        steps[scale_mode_index].vertex_matrix = scale;
+    }
+}
+
 draw_transforms draw_transforms::combine_transform(const core::image_transform& transform, double aspect_ratio) const
 {
-    draw_transforms new_transform(image_transform, steps);
+    draw_transforms new_transform(image_transform, steps, scale_mode_index);
 
     auto transform_before = new_transform.current().vertex_matrix;
 
-    // Get matrix for turning coords in 'transform' into the parent frame.
-    auto new_matrix = get_vertex_matrix(transform, aspect_ratio);
-
     apply_transform_colour_values(new_transform.image_transform, transform);
-    new_transform.current().vertex_matrix = new_matrix * new_transform.current().vertex_matrix;
 
-    // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten
-    // other draw_frames
-    if (transform.enable_geometry_modifiers) {
+    if (!transform.enable_geometry_modifiers) {
+        // Get matrix for turning coords in 'transform' into the parent frame.
+        auto new_matrix = get_vertex_matrix(transform, aspect_ratio);
+
+        new_transform.current().vertex_matrix = new_matrix * new_transform.current().vertex_matrix;
+
+    } else {
+        // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten
+        // other draw_frames
+
         // Push the new clip before the new transform applied
         draw_crop_region new_clip(transform.clip_translation[0],
                                   transform.clip_translation[1],
@@ -100,6 +118,16 @@ draw_transforms draw_transforms::combine_transform(const core::image_transform& 
                                   transform.clip_translation[1] + transform.clip_scale[1]);
         new_clip.apply_transform(transform_before);
         new_transform.current().crop_regions.push_back(std::move(new_clip));
+
+        // Divide transform into 3 steps (applied in reverse order):
+        // 1. post => the rest of the transform
+        // 2. scale_mode (unity for now, will be set inside image_kernel::draw())
+        // 3. pre => anchor subtract
+        new_transform.steps.emplace_back(core::corners{}, get_post_matrix(transform, aspect_ratio));
+        new_transform.steps.emplace_back(core::corners{}, boost::numeric::ublas::identity_matrix<double>(3, 3));
+        if (new_transform.scale_mode_index < 0)
+            new_transform.scale_mode_index = new_transform.steps.size() - 1;
+        new_transform.steps.emplace_back(core::corners{}, get_pre_matrix(transform));
 
         if (!is_default_perspective(transform.perspective)) {
             // Split into a new step
