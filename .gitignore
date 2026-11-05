@@ -19,3 +19,6 @@ src/.idea
 # debian build artifacts
 /debian
 /obj-*
+# test output
+test-output
+__pycache__
