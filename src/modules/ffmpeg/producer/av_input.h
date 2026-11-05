@@ -40,8 +40,16 @@ class Input
     bool eof() const;
     void seek(int64_t ts, bool flush = true);
 
+    // A live input reopened after a read error waits here until the producer, having dropped its
+    // decoders (which refer to the old context's streams), switches to it with use_reopened().
+    bool reopened() const;
+    void use_reopened();
+
   private:
-    void internal_reset();
+    void                             internal_reset();
+    std::shared_ptr<AVFormatContext> open();
+    bool                             reopen(int& attempt);
+    void                             request_abort();
 
     std::optional<bool> seekable_;
 
@@ -50,6 +58,8 @@ class Input
 
     mutable std::mutex               ic_mutex_;
     std::shared_ptr<AVFormatContext> ic_;
+    std::shared_ptr<AVFormatContext> reopened_;
+    std::atomic<bool>                has_reopened_{false};
     std::condition_variable          ic_cond_;
 
     tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> buffer_;

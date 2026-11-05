@@ -14,6 +14,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
+#include <algorithm>
 #include <set>
 
 extern "C" {
@@ -62,11 +63,13 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
         try {
             set_thread_name(L"[ffmpeg::av_producer::Input]");
 
-            int consecutive_enomem = 0;
+            int consecutive_errors = 0;
+            int reopen_attempts    = 0;
 
             while (true) {
                 auto packet = alloc_packet();
                 int  ret    = 0;
+                bool live   = false;
 
                 {
                     std::unique_lock<std::mutex> lock(ic_mutex_);
@@ -77,7 +80,8 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     }
 
                     // TODO (perf) Non blocking av_read_frame when possible.
-                    ret = av_read_frame(ic_.get(), packet.get());
+                    ret  = av_read_frame(ic_.get(), packet.get());
+                    live = !ic_->pb || !(ic_->pb->seekable & AVIO_SEEKABLE_NORMAL);
                 }
 
                 if (abort_request_) {
@@ -92,16 +96,25 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                 } else if (ret == AVERROR_EOF) {
                     eof_   = true;
                     packet = nullptr;
-                } else if (ret == AVERROR(ENOMEM)) {
-                    // Transient memory allocation failure inside the demuxer; log and retry rather
-                    // than letting the exception escape and kill the read thread permanently.
-                    // Sleep briefly to give the system a chance to free memory before retrying.
-                    ++consecutive_enomem;
-                    if (consecutive_enomem == 1) {
-                        CASPAR_LOG(warning) << "av_input[" << filename_ << "] av_read_frame: out of memory, retrying";
-                    } else if (consecutive_enomem >= 20) {
-                        CASPAR_LOG(error) << "av_input[" << filename_
-                                          << "] av_read_frame: too many consecutive out-of-memory errors, aborting";
+                } else if (ret < 0) {
+                    ++consecutive_errors;
+                    if (consecutive_errors == 1) {
+                        char msg[AV_ERROR_MAX_STRING_SIZE] = {};
+                        av_strerror(ret, msg, sizeof(msg));
+                        CASPAR_LOG(warning) << "av_input[" << filename_ << "] av_read_frame: " << msg << ", retrying";
+                    }
+                    if (live && consecutive_errors >= 5) {
+                        // Some protocol errors are sticky (e.g. a UDP buffer overrun), so a live input
+                        // is reopened until it delivers again or the producer goes away.
+                        if (!reopen(reopen_attempts)) {
+                            break;
+                        }
+                        consecutive_errors = 0;
+                        continue;
+                    }
+                    if (!live && consecutive_errors >= 20) {
+                        CASPAR_LOG(error)
+                            << "av_input[" << filename_ << "] av_read_frame: too many consecutive errors, aborting";
 
                         // Pretend we reached EOF, to avoid the producer stalling expecting more packets
                         eof_   = true;
@@ -111,12 +124,10 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
                     }
                     boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
                     continue;
-                } else {
-                    consecutive_enomem = 0;
-                    FF_RET(ret, "av_read_frame");
                 }
 
-                consecutive_enomem = 0;
+                consecutive_errors = 0;
+                reopen_attempts    = 0;
                 buffer_.push(std::move(packet));
                 graph_->set_value("input", (static_cast<double>(buffer_.size()) / buffer_.capacity()));
             }
@@ -129,8 +140,7 @@ Input::Input(const std::string& filename, std::shared_ptr<diagnostics::graph> gr
 
 Input::~Input()
 {
-    abort_request_ = true;
-    ic_cond_.notify_all();
+    request_abort();
 
     std::shared_ptr<AVPacket> packet;
     while (buffer_.try_pop(packet))
@@ -155,14 +165,73 @@ bool Input::try_pop(std::shared_ptr<AVPacket>& packet)
 AVFormatContext*       Input::operator->() { return ic_.get(); }
 AVFormatContext* const Input::operator->() const { return ic_.get(); }
 
+void Input::request_abort()
+{
+    // The flag is set first: interrupt_cb reads it without the lock, so a read or open holding the
+    // lock returns promptly. Taking the lock before notifying means a waiter cannot test the flag,
+    // miss this notification and then block for good.
+    abort_request_ = true;
+    {
+        std::lock_guard<std::mutex> lock(ic_mutex_);
+    }
+    ic_cond_.notify_all();
+}
+
 void Input::abort()
 {
-    abort_request_ = true;
-    ic_cond_.notify_all();
+    request_abort();
 
     std::shared_ptr<AVPacket> packet;
     while (buffer_.try_pop(packet))
         ;
+}
+
+bool Input::reopen(int& attempt)
+{
+    while (true) {
+        ++attempt;
+        std::unique_lock<std::mutex> lock(ic_mutex_);
+        const auto                   backoff = std::chrono::milliseconds(std::min(100 * attempt, 2000));
+        if (ic_cond_.wait_for(lock, backoff, [&] { return abort_request_.load(); })) {
+            return false;
+        }
+        try {
+            // Release the old connection, or reopening a UDP input fails to bind the port it still
+            // holds. Nothing reads from the old context in the meantime.
+            if (ic_ && ic_->pb && !(ic_->iformat->flags & AVFMT_NOFILE)) {
+                avio_closep(&ic_->pb);
+            }
+            reopened_     = open();
+            has_reopened_ = true;
+            CASPAR_LOG(info) << "av_input[" << filename_ << "] reopened";
+        } catch (...) {
+            if (attempt == 1 || attempt % 30 == 0) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+            }
+            continue;
+        }
+        // The producer's decoders refer to the old context's streams, so the producer switches
+        // contexts itself, once it has dropped them.
+        ic_cond_.wait(lock, [&] { return !reopened_ || abort_request_; });
+        return !abort_request_;
+    }
+}
+
+bool Input::reopened() const { return has_reopened_; }
+
+void Input::use_reopened()
+{
+    std::unique_lock<std::mutex> lock(ic_mutex_);
+    if (reopened_) {
+        // Packets still queued were read from the old context; its streams may not match the new
+        // ones. The reader is waiting, so nothing new can arrive before the switch.
+        std::shared_ptr<AVPacket> packet;
+        while (buffer_.try_pop(packet))
+            ;
+        ic_           = std::move(reopened_);
+        has_reopened_ = false;
+        ic_cond_.notify_all();
+    }
 }
 
 void Input::reset()
@@ -173,12 +242,19 @@ void Input::reset()
 
 void Input::internal_reset()
 {
+    ic_ = open();
+    ic_cond_.notify_all();
+}
+
+std::shared_ptr<AVFormatContext> Input::open()
+{
     AVDictionary* options = nullptr;
     CASPAR_SCOPE_EXIT { av_dict_free(&options); };
 
     static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = {L"dshow", L"v4l2", L"iec61883"};
 
     const AVInputFormat* input_format = nullptr;
+    auto                 url          = filename_;
     auto                 url_parts    = caspar::protocol_split(u16(filename_));
     if (url_parts.first == L"http" || url_parts.first == L"https") {
         FF(av_dict_set(&options, "multiple_requests", "1", 0)); // NOTE https://trac.ffmpeg.org/ticket/7034#comment:3
@@ -189,8 +265,9 @@ void Input::internal_reset()
     } else if (url_parts.first == L"rtmp" || url_parts.first == L"rtmps") {
         FF(av_dict_set(&options, "rtmp_live", "live", 0));
     } else if (PROTOCOLS_TREATED_AS_FORMATS.find(url_parts.first) != PROTOCOLS_TREATED_AS_FORMATS.end()) {
+        // filename_ keeps the protocol, so that a reopen selects the device format again.
         input_format = av_find_input_format(u8(url_parts.first).c_str());
-        filename_    = u8(url_parts.second);
+        url          = u8(url_parts.second);
     }
 
     if (seekable_) {
@@ -218,7 +295,7 @@ void Input::internal_reset()
     ic->interrupt_callback.callback = Input::interrupt_cb;
     ic->interrupt_callback.opaque   = this;
 
-    FF(avformat_open_input(&ic, filename_.c_str(), input_format, &options));
+    FF(avformat_open_input(&ic, url.c_str(), input_format, &options));
     auto ic2 = std::shared_ptr<AVFormatContext>(ic, [](AVFormatContext* ctx) { avformat_close_input(&ctx); });
 
     for (auto& p : to_map(&options)) {
@@ -226,8 +303,7 @@ void Input::internal_reset()
     }
 
     FF(avformat_find_stream_info(ic2.get(), nullptr));
-    ic_ = std::move(ic2);
-    ic_cond_.notify_all();
+    return ic2;
 }
 
 bool Input::eof() const { return eof_; }
