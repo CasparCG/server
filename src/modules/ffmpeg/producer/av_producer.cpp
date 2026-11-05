@@ -102,9 +102,14 @@ class Decoder
     Decoder(const Decoder&)            = delete;
     Decoder& operator=(const Decoder&) = delete;
 
-    AVStream*         st       = nullptr;
-    int64_t           next_pts = AV_NOPTS_VALUE;
-    std::atomic<bool> eof      = {false};
+    AVStream*            st            = nullptr;
+    bool                 live          = false;
+    int64_t              next_pts      = AV_NOPTS_VALUE;
+    std::atomic<bool>    eof           = {false};
+    std::atomic<int64_t> discontinuity = {AV_NOPTS_VALUE};
+    int                  width         = 0;
+    int                  height        = 0;
+    int                  format        = -1;
 
     std::queue<std::shared_ptr<AVPacket>> input;
     mutable boost::mutex                  input_mutex;
@@ -123,8 +128,9 @@ class Decoder
 
     Decoder() = default;
 
-    explicit Decoder(AVStream* stream)
+    Decoder(AVStream* stream, bool is_live)
         : st(stream)
+        , live(is_live)
     {
         const auto codec = get_decoder(stream->codecpar->codec_id);
 
@@ -161,6 +167,28 @@ class Decoder
         FF(avcodec_open2(ctx.get(), codec, nullptr));
 
         thread = boost::thread([this]() {
+            int64_t jump_start    = AV_NOPTS_VALUE;
+            int64_t jump_next     = AV_NOPTS_VALUE;
+            int64_t dropped_count = 0;
+
+            // Data that fails to decode (corrupt input on a lossy live stream) is dropped rather than
+            // ending the decoder, which would freeze the layer until the next PLAY. Running out of
+            // memory still ends it. One warning per run of failures, until a frame decodes again.
+            bool failing    = false;
+            auto skip_error = [&](int err, const char* where) {
+                if (err >= 0 || err == AVERROR(EAGAIN) || err == AVERROR_EOF || err == AVERROR(ENOMEM)) {
+                    return false;
+                }
+                if (!failing) {
+                    char msg[AV_ERROR_MAX_STRING_SIZE] = {};
+                    av_strerror(err, msg, sizeof(msg));
+                    CASPAR_LOG(warning) << "[ffmpeg] " << av_get_media_type_string(ctx->codec_type)
+                                        << " decoder: dropping undecodable data (" << where << ": " << msg << ")";
+                }
+                failing = true;
+                return true;
+            };
+
             try {
                 while (!thread.interruption_requested()) {
                     auto av_frame = alloc_frame();
@@ -174,7 +202,12 @@ class Decoder
                             packet = std::move(input.front());
                             input.pop();
                         }
-                        FF(avcodec_send_packet(ctx.get(), packet.get()));
+                        const auto send_ret = avcodec_send_packet(ctx.get(), packet.get());
+                        if (!skip_error(send_ret, "avcodec_send_packet")) {
+                            FF_RET(send_ret, "avcodec_send_packet");
+                        }
+                    } else if (skip_error(ret, "avcodec_receive_frame")) {
+                        continue;
                     } else if (ret == AVERROR_EOF) {
                         avcodec_flush_buffers(ctx.get());
                         av_frame->pts = next_pts;
@@ -188,6 +221,7 @@ class Decoder
                         }
                     } else {
                         FF_RET(ret, "avcodec_receive_frame");
+                        failing = false;
 
                         // TODO: Maybe Fixed in:
                         // https://github.com/FFmpeg/FFmpeg/commit/33203a08e0a26598cb103508327a1dc184b27bc6
@@ -226,6 +260,42 @@ class Decoder
                                 duration_pts = av_rescale_q(av_frame->nb_samples, {1, ctx->sample_rate}, st->time_base);
                             }
                         }
+
+                        // A corrupt live stream can yield frames with no timestamp, or one far off the
+                        // stream's timeline; the fps filter then emits endlessly, or repeats frames
+                        // until the stream catches up, which freezes the picture. Such a frame is
+                        // dropped, unless a new timeline holds for a second: one damaged PES
+                        // timestamp can produce several consistent frames. Files are left alone, as
+                        // variable frame rate media can have long gaps between frames.
+                        const auto one_second = av_rescale_q(AV_TIME_BASE, AV_TIME_BASE_Q, st->time_base);
+                        if (live && av_frame->pts == AV_NOPTS_VALUE) {
+                            if (next_pts == AV_NOPTS_VALUE) {
+                                continue;
+                            }
+                            av_frame->pts = next_pts;
+                        } else if (live && next_pts != AV_NOPTS_VALUE &&
+                                   std::abs(av_frame->pts - next_pts) > 5 * one_second) {
+                            if (jump_next == AV_NOPTS_VALUE || std::abs(av_frame->pts - jump_next) > one_second) {
+                                jump_start = av_frame->pts;
+                            }
+                            jump_next = av_frame->pts + std::max<int64_t>(duration_pts, 0);
+                            if (av_frame->pts - jump_start < one_second) {
+                                if (dropped_count++ == 0) {
+                                    CASPAR_LOG(warning) << "[ffmpeg] " << av_get_media_type_string(ctx->codec_type)
+                                                        << " decoder: dropping frames off the stream's timeline";
+                                }
+                                continue;
+                            }
+                            // The stream really jumped. The filters must restart where the new
+                            // timeline begins, or fps would fill the whole gap with repeats.
+                            {
+                                boost::lock_guard<boost::mutex> lock(output_mutex);
+                                std::queue<std::shared_ptr<AVFrame>>().swap(output);
+                            }
+                            output_cond.notify_all();
+                            discontinuity = av_rescale_q(av_frame->pts, st->time_base, TIME_BASE_Q);
+                        }
+                        jump_next = AV_NOPTS_VALUE;
 
                         if (duration_pts > 0) {
                             next_pts = av_frame->pts + duration_pts;
@@ -285,6 +355,21 @@ class Decoder
         }
 
         input_cond.notify_all();
+    }
+
+    // Where the stream's timeline jumped to (AV_TIME_BASE units), once; AV_NOPTS_VALUE otherwise.
+    int64_t take_discontinuity() { return discontinuity.exchange(AV_NOPTS_VALUE); }
+
+    // Size and format the filters are built for, once a frame has differed from the codec context
+    // (which a damaged parameter set can leave out of step with the frames). 0/-1 until then.
+    int  frame_width() const { return width; }
+    int  frame_height() const { return height; }
+    int  frame_format() const { return format; }
+    void set_frame_geometry(const AVFrame& frame)
+    {
+        width  = frame.width;
+        height = frame.height;
+        format = frame.format;
     }
 
     std::shared_ptr<AVFrame> pop()
@@ -498,14 +583,23 @@ struct Filter
 
                 auto it = streams.find(stream->index);
                 if (it == streams.end()) {
-                    it = streams.emplace(stream->index, stream).first;
+                    const bool live = !input->pb || !(input->pb->seekable & AVIO_SEEKABLE_NORMAL);
+                    it              = streams
+                             .emplace(std::piecewise_construct,
+                                      std::forward_as_tuple(stream->index),
+                                      std::forward_as_tuple(stream, live))
+                             .first;
                 }
 
                 auto st = it->second.ctx;
 
                 if (st->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    auto args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % st->width % st->height %
-                                 st->pix_fmt % st->pkt_timebase.num % st->pkt_timebase.den)
+                    const auto& dec    = it->second;
+                    const auto  width  = dec.frame_width() > 0 ? dec.frame_width() : st->width;
+                    const auto  height = dec.frame_height() > 0 ? dec.frame_height() : st->height;
+                    const auto  format = dec.frame_format() >= 0 ? dec.frame_format() : static_cast<int>(st->pix_fmt);
+                    auto        args = (boost::format("video_size=%dx%d:pix_fmt=%d:time_base=%d/%d") % width % height %
+                                 format % st->pkt_timebase.num % st->pkt_timebase.den)
                                     .str();
                     auto name = (boost::format("in_%d") % stream->index).str();
 
@@ -653,6 +747,7 @@ struct AVProducer::Impl
 
     Input                  input_;
     std::map<int, Decoder> decoders_;
+    std::map<int, int64_t> audio_change_since_;
     Filter                 video_filter_;
     Filter                 audio_filter_;
 
@@ -822,6 +917,21 @@ struct AVProducer::Impl
                 if (seek != AV_NOPTS_VALUE) {
                     seek_internal(seek);
                     frame = Frame{};
+                    continue;
+                }
+            }
+
+            {
+                int64_t jump = AV_NOPTS_VALUE;
+                for (auto& p : decoders_) {
+                    const auto t = p.second.take_discontinuity();
+                    if (t != AV_NOPTS_VALUE && (jump == AV_NOPTS_VALUE || t < jump)) {
+                        jump = t;
+                    }
+                }
+                if (jump != AV_NOPTS_VALUE) {
+                    CASPAR_LOG(warning) << print() << " input timeline jumped, restarting filters";
+                    reset(jump);
                     continue;
                 }
             }
@@ -1150,6 +1260,53 @@ struct AVProducer::Impl
             auto frame = it->second.pop();
             if (!frame) {
                 continue;
+            }
+
+            // A frame whose size or format differs from what the graph was built for (a stream
+            // change, or a damaged parameter set) would fail in filters such as the deinterlacer.
+            // Rebuild the graphs for it, as the ffmpeg CLI does, and feed it to the new ones.
+            if (frame->data[0] && it->second.ctx->codec_type == AVMEDIA_TYPE_VIDEO && !p.second.empty()) {
+                const auto link = p.second.front()->outputs[0];
+                if (frame->width != link->w || frame->height != link->h || frame->format != link->format) {
+                    const auto index      = p.first;
+                    const auto start_time = av_rescale_q(frame->pts, it->second.ctx->pkt_timebase, TIME_BASE_Q);
+                    CASPAR_LOG(warning) << print() << " video changed to " << frame->width << "x" << frame->height
+                                        << ", rebuilding filters";
+                    it->second.set_frame_geometry(*frame);
+                    reset(start_time); // invalidates the iterators above
+                    auto src = sources_.find(index);
+                    if (src != sources_.end()) {
+                        for (auto& source : src->second) {
+                            FF(av_buffersrc_write_frame(source, frame.get()));
+                        }
+                    }
+                    return true;
+                }
+            }
+
+            // The audio source refuses a frame whose parameters differ from its own, and damaged
+            // audio often decodes to such frames. Drop them, unless the change lasts a second; by
+            // then the codec context has the new parameters and the graphs are rebuilt from it.
+            if (frame->data[0] && it->second.ctx->codec_type == AVMEDIA_TYPE_AUDIO && !p.second.empty()) {
+                const auto link  = p.second.front()->outputs[0];
+                const auto pts   = av_rescale_q(frame->pts, it->second.ctx->pkt_timebase, TIME_BASE_Q);
+                auto&      since = audio_change_since_.emplace(p.first, AV_NOPTS_VALUE).first->second;
+                if (frame->sample_rate != link->sample_rate || frame->format != link->format ||
+                    frame->ch_layout.nb_channels != link->ch_layout.nb_channels) {
+                    if (since == AV_NOPTS_VALUE || pts < since) {
+                        since = pts;
+                        CASPAR_LOG(warning) << print() << " dropping audio whose format does not match the stream";
+                    }
+                    if (pts - since < AV_TIME_BASE) {
+                        result = true;
+                        continue;
+                    }
+                    CASPAR_LOG(warning) << print() << " audio format changed, rebuilding filters";
+                    since = AV_NOPTS_VALUE;
+                    reset(pts); // invalidates the iterators above
+                    return true;
+                }
+                since = AV_NOPTS_VALUE;
             }
 
             for (auto& source : p.second) {
