@@ -5,6 +5,8 @@
 #include <cmath>
 #include <unordered_set>
 
+#pragma warning(disable : 4267)
+
 namespace caspar::accelerator::ogl {
 
 draw_crop_region::draw_crop_region(double left, double top, double right, double bottom)
