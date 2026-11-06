@@ -350,6 +350,9 @@ class transition_producer : public frame_producer
             }
         } 
         else if (info_.type == transition_type::wipe) {
+            // clip transform requires enable_geometry_modifiers
+            dst_frame.transform().image_transform.enable_geometry_modifiers = true;
+
             if (is_horizontal) {
                 if (info_.direction == transition_direction::from_right) {
                     dst_frame.transform().image_transform.clip_scale[0] = delta;
