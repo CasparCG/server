@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <unordered_set>
 
+#pragma warning(disable : 4267)
+
 namespace caspar::accelerator::ogl {
 
 draw_crop_region::draw_crop_region(double left, double top, double right, double bottom)
@@ -78,21 +80,39 @@ bool is_default_perspective(const core::corners& perspective)
            perspective.ll[0] == 0 && perspective.ll[1] == 1 && perspective.lr[0] == 1 && perspective.lr[1] == 1;
 }
 
+void draw_transforms::apply_scale_mode(double scale_x, double scale_y)
+{
+    t_matrix scale = boost::numeric::ublas::identity_matrix<double>(3, 3);
+    scale(0, 0) = scale_x;
+    scale(1, 1) = scale_y;
+
+    if (scale_mode_index < 0) {
+        // There is no layer transform, add it as a first step.
+        steps.emplace_back(core::corners{}, scale);
+        scale_mode_index = steps.size() - 1;
+    } else {
+        steps[scale_mode_index].vertex_matrix = scale;
+    }
+}
+
 draw_transforms draw_transforms::combine_transform(const core::image_transform& transform, double aspect_ratio) const
 {
-    draw_transforms new_transform(image_transform, steps);
+    draw_transforms new_transform(image_transform, steps, scale_mode_index);
 
     auto transform_before = new_transform.current().vertex_matrix;
 
-    // Get matrix for turning coords in 'transform' into the parent frame.
-    auto new_matrix = get_vertex_matrix(transform, aspect_ratio);
-
     apply_transform_colour_values(new_transform.image_transform, transform);
-    new_transform.current().vertex_matrix = new_matrix * new_transform.current().vertex_matrix;
 
-    // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten
-    // other draw_frames
-    if (transform.enable_geometry_modifiers) {
+    if (!transform.enable_geometry_modifiers) {
+        // Get matrix for turning coords in 'transform' into the parent frame.
+        auto new_matrix = get_vertex_matrix(transform, aspect_ratio);
+
+        new_transform.current().vertex_matrix = new_matrix * new_transform.current().vertex_matrix;
+
+    } else {
+        // Only enable this for some transforms, to avoid applying crops when a draw_frame is just being used to flatten
+        // other draw_frames
+
         // Push the new clip before the new transform applied
         draw_crop_region new_clip(transform.clip_translation[0],
                                   transform.clip_translation[1],
@@ -100,6 +120,16 @@ draw_transforms draw_transforms::combine_transform(const core::image_transform& 
                                   transform.clip_translation[1] + transform.clip_scale[1]);
         new_clip.apply_transform(transform_before);
         new_transform.current().crop_regions.push_back(std::move(new_clip));
+
+        // Divide transform into 3 steps (applied in reverse order):
+        // 1. post => the rest of the transform
+        // 2. scale_mode (unity for now, will be set inside image_kernel::draw())
+        // 3. pre => anchor subtract
+        new_transform.steps.emplace_back(core::corners{}, get_post_matrix(transform, aspect_ratio));
+        new_transform.steps.emplace_back(core::corners{}, boost::numeric::ublas::identity_matrix<double>(3, 3));
+        if (new_transform.scale_mode_index < 0)
+            new_transform.scale_mode_index = new_transform.steps.size() - 1;
+        new_transform.steps.emplace_back(core::corners{}, get_pre_matrix(transform));
 
         if (!is_default_perspective(transform.perspective)) {
             // Split into a new step
@@ -295,13 +325,35 @@ void fill_texture_q_for_quad(std::vector<wrapped_vertex>& coords)
     }
 }
 
-void transform_vertex(const draw_transform_step& step, t_point& vertex)
+// Perspective is applied to the raw image before the SCALE_MODE step, where the image is thought to cover the whole
+// screen. If the image is scaled in the SCALE_MODE step afterwards (any mode other than "STRETCH"), this also scales
+// the corner shifts along with it. Perspective values are expressed in screen units, and in order to keep the shifts
+// the same size on the screen, we "unscale" them first (divide by the SCALE_MODE amounts), so that after the SCALE_MODE
+// step they are back in screen units.
+core::corners unscale_perspective(core::corners p, double scale_x, double scale_y)
+{
+    if (scale_x <= 0.0 || scale_y <= 0.0) {
+        return p;
+    }
+
+    auto shift = [&](std::array<double, 2>& corner, double default_x, double default_y) {
+        corner[0] = default_x + (corner[0] - default_x) / scale_x;
+        corner[1] = default_y + (corner[1] - default_y) / scale_y;
+    };
+    shift(p.ul, 0.0, 0.0);
+    shift(p.ur, 1.0, 0.0);
+    shift(p.lr, 1.0, 1.0);
+    shift(p.ll, 0.0, 1.0);
+    return p;
+}
+
+void transform_vertex(const t_matrix& matrix, const core::corners& perspective, t_point& vertex)
 {
     // Apply basic transforms of this step
-    vertex = vertex * step.vertex_matrix;
+    vertex = vertex * matrix;
 
     // Apply perspective. These rely on x and y of the coord, so can't be done as a shared matrix
-    apply_perspective_to_vertex(vertex, step.perspective);
+    apply_perspective_to_vertex(vertex, perspective);
 }
 
 std::vector<core::frame_geometry::coord>
@@ -317,16 +369,27 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
 
     std::vector<draw_crop_region> transformed_regions;
 
+    double scale_x = 1, scale_y = 1;
+    if (scale_mode_index >= 0) {
+        scale_x = steps[scale_mode_index].vertex_matrix(0, 0);
+        scale_y = steps[scale_mode_index].vertex_matrix(1, 1);
+    }
+
     // Apply the transforms
     for (int i = (int)steps.size() - 1; i >= 0; i--) {
+        const auto& matrix      = steps[i].vertex_matrix;
+        const auto  perspective = scale_mode_index >= 0 && i > scale_mode_index
+                                      ? unscale_perspective(steps[i].perspective, scale_x, scale_y)
+                                      : steps[i].perspective;
+
         for (auto& coord : cropped_coords) {
-            transform_vertex(steps[i], coord.vertex);
+            transform_vertex(matrix, perspective, coord.vertex);
         }
 
         // Transform existing regions
         for (auto& region : transformed_regions) {
             for (int l = 0; l < 4; ++l) {
-                transform_vertex(steps[i], region.coords[l]);
+                transform_vertex(matrix, perspective, region.coords[l]);
             }
         }
 
@@ -335,7 +398,7 @@ draw_transforms::transform_coords(const std::vector<core::frame_geometry::coord>
             draw_crop_region new_region = region;
             for (int l = 0; l < 4; ++l) {
                 // Only apply perspective for new ones
-                apply_perspective_to_vertex(new_region.coords[l], steps[i].perspective);
+                apply_perspective_to_vertex(new_region.coords[l], perspective);
             }
 
             transformed_regions.push_back(new_region);

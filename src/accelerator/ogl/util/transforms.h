@@ -45,7 +45,9 @@ struct draw_transform_step
 
 struct draw_transforms
 {
+    core::image_transform image_transform;
     std::vector<draw_transform_step> steps;
+    int scale_mode_index = -1;
 
     draw_transforms()
         : image_transform(core::image_transform())
@@ -53,15 +55,16 @@ struct draw_transforms
     {
     }
 
-    explicit draw_transforms(core::image_transform transform, std::vector<draw_transform_step> steps)
+    explicit draw_transforms(core::image_transform transform, std::vector<draw_transform_step> steps, int scale_mode_index)
         : image_transform(transform)
         , steps(std::move(steps))
+        , scale_mode_index(scale_mode_index)
     {
     }
 
-    core::image_transform image_transform;
-
     draw_transform_step& current() { return steps.back(); }
+
+    void apply_scale_mode(double x, double y);
 
     [[nodiscard]] draw_transforms combine_transform(const core::image_transform& transform, double aspect_ratio) const;
 

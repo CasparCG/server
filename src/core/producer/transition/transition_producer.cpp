@@ -350,14 +350,17 @@ class transition_producer : public frame_producer
             }
         } 
         else if (info_.type == transition_type::wipe) {
+            // clip transform requires enable_geometry_modifiers
+            dst_frame.transform().image_transform.enable_geometry_modifiers = true;
+
             if (is_horizontal) {
-                if (info_.direction == transition_direction::from_right) {
+                if (info_.direction == transition_direction::from_left) {
                     dst_frame.transform().image_transform.clip_scale[0] = delta;
                 } else {
                     dst_frame.transform().image_transform.clip_translation[0] = (1.0 - delta);
                 }
             } else {
-                if (info_.direction == transition_direction::from_bottom) {
+                if (info_.direction == transition_direction::from_top) {
                     dst_frame.transform().image_transform.clip_scale[1] = delta;
                 } else {
                     dst_frame.transform().image_transform.clip_translation[1] = (1.0 - delta);
