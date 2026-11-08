@@ -42,12 +42,13 @@ class audio_mixer final : public frame_visitor
     audio_mixer& operator=(const audio_mixer&);
 
   public:
-    audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph);
+    audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph, bool hold_underflow = true);
 
-    array<const int32_t> operator()(const struct video_format_desc& format_desc, int nb_samples);
+    array<const int32_t> operator()(const struct video_format_desc& format_desc, int nb_samples, bool meter = true);
     void                 set_master_volume(float volume);
     float                get_master_volume();
     core::monitor::state state() const;
+    void                 update_meter(const array<const int32_t>& audio, int channels);
 
     void push(const struct frame_transform& transform) override;
     void visit(const class const_frame& frame) override;
