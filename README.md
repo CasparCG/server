@@ -231,6 +231,25 @@ and a prolonged independent-clock test. Verify audio channel layout with the
 same eight-channel FFmpeg consumer filter, and check no program SDI audio or
 source meters change while updating destination mixes.
 
+### Pro-audio device output
+
+Configure the engine mix with `MIXER AUDIO_MATRIX`, then select physical device
+outputs separately. For example:
+
+```text
+MIXER 5 AUDIO_MATRIX 0 "1:10:4:PRE:1,2:20:0:POST:0.5"
+MIXER 5 AUDIO_MATRIX 1 "1:10:5:PRE:1,2:20:1:POST:0.5"
+ADD 5 PROAUDIO DEVICE_NAME "Monitoring interface" CHANNEL_MAP "1,2" BUFFER_SIZE 512 LATENCY_MS 10
+```
+
+Here engine audio indices 0 and 1 feed device outputs 1 and 2. `CHANNEL_MAP`
+is still one-based physical device addressing; it does not select source layers
+or perform summing. Updating the matrix does not reopen the device. Additional
+engine channels retain legacy mixing unless explicitly overridden; list more
+device outputs if those channels should also be played. PortAudio callbacks use
+the same shared SPSC PCM FIFO as the matrix transport, without callback-side
+locks, allocation or matrix processing.
+
 License
 ---------
 
