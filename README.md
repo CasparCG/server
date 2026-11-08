@@ -143,6 +143,8 @@ configured output audio channel. It works with normal media, native routes,
 and the interleaved PCM interfaces of the pro-audio producer/consumer in
 upstream CasparCG/server#1809 and CasparCG/server#1806. Device callbacks and
 their one-based device `CHANNEL_MAP` options are unchanged.
+The pro-audio consumer opts out of GPU-to-host video readback; its device channel
+map is applied to the channel's final matrix PCM, not to individual producers.
 
 ```text
 MIXER 5 AUDIO_MATRIX 0 "5:10:0:POST:1,5:20:4:PRE:0.5"
