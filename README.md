@@ -250,6 +250,34 @@ device outputs if those channels should also be played. PortAudio callbacks use
 the same shared SPSC PCM FIFO as the matrix transport, without callback-side
 locks, allocation or matrix processing.
 
+### Pro-audio capture into matrix buses
+
+Capture physical inputs into engine channels on a source layer, then tap that
+layer without creating a video route:
+
+```text
+PLAY 1-10 PROAUDIO DEVICE_NAME "Capture interface" CHANNEL_MAP "5,6,1,2" BUFFER_SIZE 512 LATENCY_MS 10
+MIXER 5 AUDIO_MATRIX 0 "1:10:0:PRE:1"
+MIXER 5 AUDIO_MATRIX 1 "1:10:1:PRE:1"
+MIXER 5 AUDIO_MATRIX 2 "1:10:2:POST:1"
+MIXER 5 AUDIO_MATRIX 3 "1:10:3:POST:1"
+ADD 5 PROAUDIO DEVICE_NAME "Monitoring interface" CHANNEL_MAP "1,2,3,4"
+```
+
+The producer's one-based device inputs 5,6,1,2 become zero-based engine indices
+0,1,2,3; remaining engine channels are zero-filled. Matrix indices select those
+engine channels, not physical device inputs. PRE bypasses the source layer
+volume, while POST follows it. Live matrix changes do not reopen the capture or
+playback streams and do not change either device map.
+
+The capture producer retains its existing transparent 1x1 frame for engine
+compatibility. Cross-channel taps transport PCM only, never copy its video, and
+do not invoke the source image compositor when that source has no consumers.
+Capture conversion and matrix mixing remain on engine threads; the input device
+callback only maps samples into preallocated scratch storage and the shared
+FIFO. Independent capture/output clocks still require on-site drift testing;
+this feature does not add asynchronous sample-rate correction.
+
 License
 ---------
 
