@@ -58,6 +58,10 @@ class output final
 
     size_t consumer_count() const;
 
+    // True if any attached consumer needs the final frame on the host (the
+    // mixer can skip the GPU->host readback when this is false).
+    bool needs_host_frame() const;
+
     core::monitor::state state() const;
 
   private:

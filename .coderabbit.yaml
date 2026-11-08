@@ -1,0 +1,9 @@
+# CodeRabbit settings for this fork only; keep this file off master and upstream PR branches.
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+reviews:
+  auto_review:
+    enabled: true
+    drafts: true
+    # Review pull requests targeting any branch, not only the default branch.
+    base_branches:
+      - ".*"

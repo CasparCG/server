@@ -57,7 +57,7 @@ class test_image_mixer final : public caspar::core::image_mixer
     void                      update_aspect_ratio(double) override {}
     caspar::common::bit_depth depth() const override { return caspar::common::bit_depth::bit8; }
     std::future<std::tuple<caspar::array<const uint8_t>, std::shared_ptr<caspar::core::texture>>>
-    render(const caspar::core::video_format_desc& format) override
+    render(const caspar::core::video_format_desc& format, bool) override
     {
         ++renders_;
         return caspar::make_ready_future(std::make_tuple(
