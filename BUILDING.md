@@ -103,11 +103,18 @@ audio callbacks remove the consumer so the channel can fall back to another cloc
 
 -DBUILD_TESTING=ON - build the native route mapping and channel audio matrix PCM
 regression tests. Matrix processing uses the engine's PCM interface and requires
-no PortAudio hardware for these tests:
+no PortAudio hardware for these tests. Tests are OFF by default. With
+`ENABLE_PROAUDIO=ON`, `proaudio_tests` additionally exercises mocked device
+selection, map validation, concurrent library lifetime and playback clock cadence:
 
 ```sh
 cmake --build build --target route_audio_mapping_tests audio_matrix_tests
 ctest --test-dir build --output-on-failure -R 'route_audio_mapping_samples|audio_matrix_samples'
+```
+
+```sh
+cmake --build build --target proaudio_tests
+ctest --test-dir build --output-on-failure -R proaudio_mock_samples
 ```
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.

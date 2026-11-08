@@ -87,6 +87,10 @@ atomically takes effect on the next source frame pair, after already queued
 route audio has drained; `DEFAULT` restores normal
 passthrough. Calling `AUDIO_MAP` without a value returns the current setting.
 The effective mapping is also reported as `route/audio-map` in producer state.
+The current source channel count is reported as `route/source-audio-channels`.
+Mapped PCM uses the source's current channel stride after a format change;
+selected indices no longer present produce silence until they return or the
+mapping is updated. New updates are validated against the current source count.
 
 ```text
 CALL 5-20 AUDIO_MAP "2=4,3=5"
@@ -99,7 +103,8 @@ additional buffering. Switching between unrelated waveforms can click; use a
 short gain ramp in the controlling workflow when click-free transitions are
 required.
 Explicitly mapped routes mute repeated late frames rather than replaying stale
-audio, while preserving their video. Default passthrough retains legacy behavior.
+audio, while preserving their video, including mapped frames already buffered
+before a `DEFAULT` update. Newly produced passthrough frames retain legacy behavior.
 
 The FFmpeg consumer uses the channel's audio layout as its input. The following
 consumer filter selects the mapped first eight channels as an eight-channel
@@ -204,9 +209,11 @@ PortAudio callback threads.
 All sources and destinations must use the same sample rate; mismatches are
 rejected rather than silently resampled. Different video rates/field cadences
 are accommodated by sample-count FIFO consumption, including 1080i5994 to
-1080p5994. FIFO capacity is the next power of two above twice the source's largest
-field audio cadence minus one. This bounds queued audio to roughly two to four
-source field periods, not a configurable video buffer. Independent clocks can
+1080p5994 and faster sources feeding slower destinations. FIFO capacity is the
+next power of two above two times the larger source/destination field cadence,
+plus one source field cadence minus one sample. This covers destination reads
+and publication bursts with bounded PCM storage, not a configurable video buffer.
+Independent clocks can
 still drift: underflow inserts silence and overflow discards queued stale PCM
 at the next read; diagnostics report `audio-matrix-underflow/overflow`.
 No asynchronous clock-drift correction or click-free crosspoint ramp is added.
