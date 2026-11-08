@@ -44,7 +44,7 @@ class audio_mixer final : public frame_visitor
   public:
     audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph, bool hold_underflow = true);
 
-    array<const int32_t> operator()(const struct video_format_desc& format_desc, int nb_samples);
+    array<const int32_t> operator()(const struct video_format_desc& format_desc, int nb_samples, bool meter = true);
     void                 set_master_volume(float volume);
     float                get_master_volume();
     core::monitor::state state() const;

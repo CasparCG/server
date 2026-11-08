@@ -99,7 +99,7 @@ struct audio_mixer::impl
 
     float get_master_volume() { return master_volume_; }
 
-    array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples)
+    array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples, bool meter)
     {
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
@@ -253,7 +253,8 @@ struct audio_mixer::impl
         }
 
         array<const int32_t> audio(std::move(result));
-        update_meter(audio, channels_);
+        if (meter)
+            update_meter(audio, channels_);
         return audio;
     }
 
@@ -288,9 +289,9 @@ void                 audio_mixer::visit(const const_frame& frame) { impl_->visit
 void                 audio_mixer::pop() { impl_->pop(); }
 void                 audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float                audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
-array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples)
+array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples, bool meter)
 {
-    return impl_->mix(format_desc, nb_samples);
+    return impl_->mix(format_desc, nb_samples, meter);
 }
 core::monitor::state audio_mixer::state() const { return impl_->state_; }
 void                 audio_mixer::update_meter(const array<const int32_t>& audio, int channels)

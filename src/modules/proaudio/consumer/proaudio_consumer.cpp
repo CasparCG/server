@@ -46,6 +46,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -78,7 +79,8 @@ struct proaudio_consumer : public core::frame_consumer
     // set to BUFFER_SIZE (with headroom) in initialize() when it is.
     unsigned long              max_frames_per_callback_ = 8192;
     std::vector<std::int16_t> scratch_; // pre-sized once, only touched by the realtime callback
-    std::string                device_name_for_print_; // set once in initialize(), only read after
+    mutable std::mutex         print_mutex_;
+    std::wstring               print_text_ = L"proaudio[uninitialized]";
 
     std::unique_ptr<frame_ring_buffer> ring_;
     std::atomic<std::uint64_t>         frames_played_{0};
@@ -87,6 +89,7 @@ struct proaudio_consumer : public core::frame_consumer
     std::atomic<bool>                  stop_{false};
     std::atomic<bool>                  failed_{false};
     std::chrono::duration<double>      playback_timeout_{0};
+    std::uint64_t                      playback_deadline_ = 0;
 
     executor executor_{L"proaudio_consumer"};
 
@@ -135,7 +138,10 @@ struct proaudio_consumer : public core::frame_consumer
                 failed_.store(false, std::memory_order_release);
                 format_desc_   = format_desc;
                 channel_index_ = channel_index;
-                graph_->set_text(print());
+                if (format_desc_.audio_channels <= 0 || format_desc_.audio_sample_rate <= 0 || format_desc_.fps <= 0 ||
+                    format_desc_.audio_cadence.empty() ||
+                    *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end()) <= 0)
+                    CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Invalid PortAudio output audio format"));
 
                 channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
                 if (channel_map_.empty())
@@ -149,15 +155,29 @@ struct proaudio_consumer : public core::frame_consumer
                         << msg_info("No default PortAudio output device is available on this machine. "
                                     "Specify DEVICE_NAME/HOST_API explicitly."));
 
-                device_name_for_print_ = info->name;
+                if (channel_map_param_.empty() &&
+                    channel_map_.size() > static_cast<std::size_t>(info->maxOutputChannels))
+                    channel_map_.resize(static_cast<std::size_t>(info->maxOutputChannels));
+                if (channel_map_.empty())
+                    CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Selected device has no output channels"));
+                {
+                    std::lock_guard lock(print_mutex_);
+                    print_text_ = L"proaudio[" + std::to_wstring(channel_index_) + L"|" + u16(info->name) + L"|" +
+                                  format_desc_.name + L"]";
+                }
+                graph_->set_text(print());
 
                 // Every entry must be a valid 1-based device channel - a stray 0/negative entry would
                 // underflow to a huge index and corrupt memory in the realtime callback below.
+                std::set<int> destinations;
                 for (auto ch : channel_map_) {
                     if (ch < 1)
                         CASPAR_THROW_EXCEPTION(
                             invalid_operation() << msg_info("CHANNEL_MAP entries must be 1-based channel numbers, got " +
                                                             std::to_string(ch)));
+                    if (!destinations.insert(ch).second)
+                        CASPAR_THROW_EXCEPTION(invalid_operation()
+                                               << msg_info("CHANNEL_MAP has duplicate output channels"));
                 }
 
                 auto max_dest_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
@@ -191,6 +211,8 @@ struct proaudio_consumer : public core::frame_consumer
 
                 ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
                 scratch_.resize(max_frames_per_callback_ * channel_map_.size());
+                frames_played_.store(0, std::memory_order_release);
+                playback_deadline_ = 0;
 
                 // Pre-roll silence so the callback has real data to consume from the first tick,
                 // instead of waiting on data that hasn't been pushed by send() yet.
@@ -250,7 +272,7 @@ struct proaudio_consumer : public core::frame_consumer
     {
         auto target_future = executor_.begin_invoke([this, frame = std::move(frame)] {
             if (failed_.load(std::memory_order_acquire) || stop_)
-                return std::uint64_t{0};
+                return std::make_tuple(std::uint64_t{0}, std::chrono::duration<double>{0}, 0.0);
 
             auto&& audio_in     = frame.audio_data();
             auto    audio_ptr    = audio_in.data();
@@ -270,31 +292,33 @@ struct proaudio_consumer : public core::frame_consumer
                 }
             }
 
+            const bool underflow = dropout_.exchange(false, std::memory_order_acq_rel);
+            if (underflow)
+                playback_deadline_ = std::max(playback_deadline_, frames_played_.load(std::memory_order_acquire));
+            playback_deadline_ += static_cast<std::uint64_t>(num_samples);
             auto written = ring_->push(out.data(), static_cast<std::size_t>(num_samples));
             if (written < static_cast<std::size_t>(num_samples))
                 dropout_.store(true, std::memory_order_relaxed);
 
-            auto target = frames_played_.load(std::memory_order_acquire) + static_cast<std::uint64_t>(num_samples);
-
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
-            if (dropout_.exchange(false, std::memory_order_relaxed))
+            if (underflow)
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
             if (device_underflow_.exchange(false, std::memory_order_relaxed))
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "device-underflow");
 
-            return target;
+            return std::make_tuple(playback_deadline_, playback_timeout_, format_desc_.fps);
         });
 
         return std::async(std::launch::deferred, [this, target_future = std::move(target_future)]() mutable {
             // Block until the executor task above has actually computed the target - only then do
             // we know how many played-frames to wait for.
-            auto target = target_future.get();
-            auto deadline = std::chrono::steady_clock::now() + playback_timeout_;
+            const auto [target, timeout, fps] = target_future.get();
+            auto deadline                     = std::chrono::steady_clock::now() + timeout;
 
             while (!stop_ && !failed_.load(std::memory_order_acquire)) {
                 if (frames_played_.load(std::memory_order_acquire) >= target) {
-                    graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
+                    graph_->set_value("frame-time", frame_timer_.elapsed() * fps * 0.5);
                     frame_timer_.restart();
                     return true;
                 }
@@ -311,8 +335,8 @@ struct proaudio_consumer : public core::frame_consumer
 
     std::wstring print() const override
     {
-        return L"proaudio[" + std::to_wstring(channel_index_) + L"|" + u16(device_name_for_print_) + L"|" +
-               format_desc_.name + L"]";
+        std::lock_guard lock(print_mutex_);
+        return print_text_;
     }
 
     std::wstring name() const override { return L"proaudio"; }
