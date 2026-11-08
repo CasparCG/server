@@ -41,9 +41,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstring>
 #include <future>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -83,6 +85,8 @@ struct proaudio_consumer : public core::frame_consumer
     std::atomic<bool>                  dropout_{false};
     std::atomic<bool>                  device_underflow_{false};
     std::atomic<bool>                  stop_{false};
+    std::atomic<bool>                  failed_{false};
+    std::chrono::duration<double>      playback_timeout_{0};
 
     executor executor_{L"proaudio_consumer"};
 
@@ -114,13 +118,7 @@ struct proaudio_consumer : public core::frame_consumer
     {
         stop_ = true;
 
-        executor_.invoke([this] {
-            if (stream_) {
-                Pa_StopStream(stream_);
-                Pa_CloseStream(stream_);
-                stream_ = nullptr;
-            }
-        });
+        executor_.invoke([this] { close_stream(); });
     }
 
     // frame_consumer
@@ -129,133 +127,130 @@ struct proaudio_consumer : public core::frame_consumer
                     const core::channel_info&      channel_info,
                     int                            port_index) override
     {
-        executor_.invoke([this, format_desc, channel_info] {
-            if (stream_) {
-                auto stop_err  = Pa_StopStream(stream_);
-                auto close_err = Pa_CloseStream(stream_);
-                if (close_err != paNoError)
-                    CASPAR_THROW_EXCEPTION(invalid_operation()
-                                           << msg_info(std::string("Failed to close existing PortAudio stream: ") +
-                                                       Pa_GetErrorText(close_err)));
-                stream_ = nullptr;
-                if (stop_err != paNoError)
-                    CASPAR_LOG(warning) << "Failed to stop existing PortAudio stream: " << Pa_GetErrorText(stop_err);
-            }
+        executor_.begin_invoke([this, format_desc, channel_index = channel_info.index] {
+            try {
+                close_stream();
+                dropout_.store(false, std::memory_order_relaxed);
+                device_underflow_.store(false, std::memory_order_relaxed);
+                failed_.store(false, std::memory_order_release);
+                format_desc_   = format_desc;
+                channel_index_ = channel_index;
+                graph_->set_text(print());
 
-            format_desc_   = format_desc;
-            channel_index_ = channel_info.index;
+                channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
+                if (channel_map_.empty())
+                    CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("CHANNEL_MAP resolved to no channels"));
 
-            channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
-            if (channel_map_.empty())
-                CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("CHANNEL_MAP resolved to no channels"));
-
-            auto device = find_device(device_direction::output, device_name_, host_api_name_);
-            auto info   = Pa_GetDeviceInfo(device);
-            if (!info)
-                CASPAR_THROW_EXCEPTION(invalid_operation()
-                                       << msg_info("No default PortAudio output device is available on this machine. "
-                                                   "Specify DEVICE_NAME/HOST_API explicitly."));
-
-            device_name_for_print_ = info->name;
-            graph_->set_text(print());
-
-            // Every entry must be a valid 1-based device channel - a stray 0/negative entry would
-            // underflow to a huge index and corrupt memory in the realtime callback below.
-            for (auto ch : channel_map_) {
-                if (ch < 1)
+                auto device = find_device(device_direction::output, device_name_, host_api_name_);
+                auto info   = Pa_GetDeviceInfo(device);
+                if (!info)
                     CASPAR_THROW_EXCEPTION(
                         invalid_operation()
-                        << msg_info("CHANNEL_MAP entries must be 1-based channel numbers, got " + std::to_string(ch)));
+                        << msg_info("No default PortAudio output device is available on this machine. "
+                                    "Specify DEVICE_NAME/HOST_API explicitly."));
+
+                device_name_for_print_ = info->name;
+
+                // Every entry must be a valid 1-based device channel - a stray 0/negative entry would
+                // underflow to a huge index and corrupt memory in the realtime callback below.
+                for (auto ch : channel_map_) {
+                    if (ch < 1)
+                        CASPAR_THROW_EXCEPTION(
+                            invalid_operation() << msg_info("CHANNEL_MAP entries must be 1-based channel numbers, got " +
+                                                            std::to_string(ch)));
+                }
+
+                auto max_dest_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
+
+                if (max_dest_channel > info->maxOutputChannels)
+                    CASPAR_THROW_EXCEPTION(
+                        invalid_operation() << msg_info("CHANNEL_MAP requires channel " +
+                                                        std::to_string(max_dest_channel) + " but device '" +
+                                                        info->name + "' only has " +
+                                                        std::to_string(info->maxOutputChannels) + " output channels"));
+
+                device_channels_ = max_dest_channel;
+
+                if (buffer_size_frames_ > 0) {
+                    // Same knob as the "buffer size" control in a DAW/ASIO control panel - trades
+                    // latency for CPU/dropout headroom. Clamped to a sane range so a stray huge value
+                    // from an AMCP client can't force an oversized allocation below.
+                    max_frames_per_callback_ = static_cast<unsigned long>(std::clamp(buffer_size_frames_, 16, 65536));
+                }
+
+                auto num_silence = delay_.in_frames(format_desc_.fps);
+                num_silence      = std::clamp<int>(num_silence, 1, format_desc_.fps);
+
+                auto max_cadence =
+                    *std::max_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
+
+                // At least double the largest block PortAudio's callback can ask for in one go, so an
+                // oversized host-requested block can't drain the ring dry and report a false dropout.
+                auto ring_capacity = std::max<std::size_t>(static_cast<std::size_t>(num_silence + 4) * max_cadence,
+                                                           static_cast<std::size_t>(max_frames_per_callback_) * 2);
+
+                ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
+                scratch_.resize(max_frames_per_callback_ * channel_map_.size());
+
+                // Pre-roll silence so the callback has real data to consume from the first tick,
+                // instead of waiting on data that hasn't been pushed by send() yet.
+                std::vector<std::int16_t> silence(static_cast<std::size_t>(max_cadence) * channel_map_.size(), 0);
+                for (auto n = 0; n < num_silence; ++n) {
+                    auto cadence = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()];
+                    ring_->push(silence.data(), cadence);
+                }
+
+                PaStreamParameters out_params{};
+                out_params.device                    = device;
+                out_params.channelCount               = device_channels_;
+                out_params.sampleFormat               = paInt16;
+                out_params.suggestedLatency = latency_ms_ >= 0.0 ? latency_ms_ / 1000.0 : info->defaultLowOutputLatency;
+                out_params.hostApiSpecificStreamInfo = nullptr;
+
+                auto err = Pa_OpenStream(&stream_,
+                                         nullptr,
+                                         &out_params,
+                                         format_desc_.audio_sample_rate,
+                                         buffer_size_frames_ > 0 ? max_frames_per_callback_
+                                                                : paFramesPerBufferUnspecified,
+                                         paNoFlag,
+                                         &proaudio_consumer::pa_callback,
+                                         this);
+                if (err != paNoError)
+                    CASPAR_THROW_EXCEPTION(invalid_operation()
+                                           << msg_info(std::string("Failed to open PortAudio stream: ") +
+                                                       Pa_GetErrorText(err)));
+
+                err = Pa_StartStream(stream_);
+                if (err != paNoError)
+                    CASPAR_THROW_EXCEPTION(invalid_operation()
+                                           << msg_info(std::string("Failed to start PortAudio stream: ") +
+                                                       Pa_GetErrorText(err)));
+
+                // Large driver buffers and device latency can exceed several video frame durations.
+                playback_timeout_ = std::chrono::duration<double>(
+                    std::max(4.0 / format_desc_.fps,
+                             2.0 * max_frames_per_callback_ / format_desc_.audio_sample_rate +
+                                 Pa_GetStreamInfo(stream_)->outputLatency));
+
+                CASPAR_LOG(info) << print() << " Using device '" << u16(std::string(info->name)) << "'";
+                CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames ("
+                                 << out_params.suggestedLatency * 1000.0 << " ms suggested, buffer "
+                                 << (buffer_size_frames_ > 0 ? std::to_string(max_frames_per_callback_) : "auto")
+                                 << " frames)";
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
+                failed_.store(true, std::memory_order_release);
+                close_stream();
             }
-
-            auto max_dest_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
-
-            if (max_dest_channel > info->maxOutputChannels)
-                CASPAR_THROW_EXCEPTION(invalid_operation()
-                                       << msg_info("CHANNEL_MAP requires channel " + std::to_string(max_dest_channel) +
-                                                   " but device '" + info->name + "' only has " +
-                                                   std::to_string(info->maxOutputChannels) + " output channels"));
-
-            device_channels_ = max_dest_channel;
-
-            if (buffer_size_frames_ > 0) {
-                // Same knob as the "buffer size" control in a DAW/ASIO control panel - trades
-                // latency for CPU/dropout headroom. Clamped to a sane range so a stray huge value
-                // from an AMCP client can't force an oversized allocation below.
-                max_frames_per_callback_ = static_cast<unsigned long>(std::clamp(buffer_size_frames_, 16, 65536));
-            }
-
-            auto num_silence = delay_.in_frames(format_desc_.fps);
-            num_silence      = std::clamp<int>(num_silence, 1, format_desc_.fps);
-
-            auto max_cadence = *std::max_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end());
-
-            // At least double the largest block PortAudio's callback can ask for in one go, so an
-            // oversized host-requested block can't drain the ring dry and report a false dropout.
-            auto ring_capacity = std::max<std::size_t>(static_cast<std::size_t>(num_silence + 4) * max_cadence,
-                                                       static_cast<std::size_t>(max_frames_per_callback_) * 2);
-
-            ring_ = std::make_unique<frame_ring_buffer>(ring_capacity, channel_map_.size());
-            scratch_.resize(max_frames_per_callback_ * channel_map_.size());
-
-            // Pre-roll silence so the callback has real data to consume from the first tick,
-            // instead of waiting on data that hasn't been pushed by send() yet.
-            std::vector<std::int16_t> silence(static_cast<std::size_t>(max_cadence) * channel_map_.size(), 0);
-            for (auto n = 0; n < num_silence; ++n) {
-                auto cadence = format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()];
-                ring_->push(silence.data(), cadence);
-            }
-
-            PaStreamParameters out_params{};
-            out_params.device           = device;
-            out_params.channelCount     = device_channels_;
-            out_params.sampleFormat     = paInt16;
-            out_params.suggestedLatency = latency_ms_ >= 0.0 ? latency_ms_ / 1000.0 : info->defaultLowOutputLatency;
-            out_params.hostApiSpecificStreamInfo = nullptr;
-
-            auto err = Pa_OpenStream(&stream_,
-                                     nullptr,
-                                     &out_params,
-                                     format_desc_.audio_sample_rate,
-                                     buffer_size_frames_ > 0 ? max_frames_per_callback_ : paFramesPerBufferUnspecified,
-                                     paNoFlag,
-                                     &proaudio_consumer::pa_callback,
-                                     this);
-            if (err != paNoError)
-                CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(
-                                           std::string("Failed to open PortAudio stream: ") + Pa_GetErrorText(err)));
-
-            err = Pa_StartStream(stream_);
-            if (err != paNoError) {
-                auto message   = std::string("Failed to start PortAudio stream: ") + Pa_GetErrorText(err);
-                auto close_err = Pa_CloseStream(stream_);
-                if (close_err == paNoError)
-                    stream_ = nullptr;
-                else
-                    message += std::string("; failed to close PortAudio stream: ") + Pa_GetErrorText(close_err);
-                CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(message));
-            }
-
-            CASPAR_LOG(info) << print() << " Using device '" << u16(std::string(info->name)) << "'";
-            CASPAR_LOG(info) << print() << " Latency: " << num_silence << " frames ("
-                             << out_params.suggestedLatency * 1000.0 << " ms suggested, buffer "
-                             << (buffer_size_frames_ > 0 ? std::to_string(max_frames_per_callback_) : "auto")
-                             << " frames)";
-
-            return stream_;
         });
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        auto target_promise = std::make_shared<std::promise<std::uint64_t>>();
-        auto target_future  = target_promise->get_future().share();
-
-        executor_.begin_invoke([this, frame = std::move(frame), target_promise] {
-            if (!stream_) {
-                target_promise->set_value(frames_played_.load(std::memory_order_acquire));
-                return;
-            }
+        auto target_future = executor_.begin_invoke([this, frame = std::move(frame)] {
+            if (failed_.load(std::memory_order_acquire) || stop_)
+                return std::uint64_t{0};
 
             auto&& audio_in     = frame.audio_data();
             auto    audio_ptr    = audio_in.data();
@@ -279,8 +274,7 @@ struct proaudio_consumer : public core::frame_consumer
             if (written < static_cast<std::size_t>(num_samples))
                 dropout_.store(true, std::memory_order_relaxed);
 
-            target_promise->set_value(frames_played_.load(std::memory_order_acquire) +
-                                      static_cast<std::uint64_t>(num_samples));
+            auto target = frames_played_.load(std::memory_order_acquire) + static_cast<std::uint64_t>(num_samples);
 
             graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
             tick_timer_.restart();
@@ -288,18 +282,26 @@ struct proaudio_consumer : public core::frame_consumer
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "drop-out");
             if (device_underflow_.exchange(false, std::memory_order_relaxed))
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "device-underflow");
+
+            return target;
         });
 
-        return std::async(std::launch::deferred, [this, target_future] {
+        return std::async(std::launch::deferred, [this, target_future = std::move(target_future)]() mutable {
             // Block until the executor task above has actually computed the target - only then do
             // we know how many played-frames to wait for.
             auto target = target_future.get();
+            auto deadline = std::chrono::steady_clock::now() + playback_timeout_;
 
-            while (!stop_) {
+            while (!stop_ && !failed_.load(std::memory_order_acquire)) {
                 if (frames_played_.load(std::memory_order_acquire) >= target) {
                     graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
                     frame_timer_.restart();
                     return true;
+                }
+                if (std::chrono::steady_clock::now() >= deadline) {
+                    CASPAR_LOG(error) << print() << " PortAudio callback stalled; removing consumer.";
+                    failed_.store(true, std::memory_order_release);
+                    return false;
                 }
                 std::this_thread::sleep_for(100us);
             }
@@ -315,6 +317,8 @@ struct proaudio_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"proaudio"; }
 
+    bool needs_host_frame() const override { return false; }
+
     bool has_synchronization_clock() const override { return true; }
 
     int index() const override { return 520; }
@@ -326,6 +330,21 @@ struct proaudio_consumer : public core::frame_consumer
     }
 
   private:
+    void close_stream()
+    {
+        if (!stream_)
+            return;
+
+        auto err = Pa_StopStream(stream_);
+        if (err != paNoError && err != paStreamIsStopped)
+            CASPAR_LOG(error) << print() << " Failed to stop PortAudio stream: " << Pa_GetErrorText(err);
+
+        err = Pa_CloseStream(stream_);
+        stream_ = nullptr;
+        if (err != paNoError)
+            CASPAR_LOG(error) << print() << " Failed to close PortAudio stream: " << Pa_GetErrorText(err);
+    }
+
     // Realtime audio thread - no locks, no allocation, no logging in here.
     static int pa_callback(const void* /*input*/,
                            void*                            output,
@@ -344,23 +363,24 @@ struct proaudio_consumer : public core::frame_consumer
 
         std::memset(out, 0, static_cast<std::size_t>(frame_count) * self->device_channels_ * sizeof(std::int16_t));
 
-        auto frames = std::min<unsigned long>(frame_count, self->max_frames_per_callback_);
-        if (frames < frame_count)
-            self->dropout_.store(true, std::memory_order_relaxed);
-
         auto n_map   = self->channel_map_.size();
-        auto played = self->ring_->pop(self->scratch_.data(), frames);
+        for (unsigned long offset = 0; offset < frame_count;) {
+            auto frames = std::min<unsigned long>(frame_count - offset, self->max_frames_per_callback_);
+            auto played = self->ring_->pop(self->scratch_.data(), frames);
 
-        for (unsigned long i = 0; i < frames; ++i) {
-            for (std::size_t c = 0; c < n_map; ++c) {
-                auto dest_ch = static_cast<std::size_t>(self->channel_map_[c] - 1); // 1-based -> 0-based
-                out[i * self->device_channels_ + dest_ch] = self->scratch_[i * n_map + c];
+            for (unsigned long i = 0; i < frames; ++i) {
+                for (std::size_t c = 0; c < n_map; ++c) {
+                    auto dest_ch = static_cast<std::size_t>(self->channel_map_[c] - 1); // 1-based -> 0-based
+                    out[(offset + i) * self->device_channels_ + dest_ch] = self->scratch_[i * n_map + c];
+                }
             }
-        }
 
-        self->frames_played_.fetch_add(frames, std::memory_order_release);
-        if (played < frames)
-            self->dropout_.store(true, std::memory_order_relaxed);
+            self->frames_played_.fetch_add(frames, std::memory_order_release);
+            if (played < frames)
+                self->dropout_.store(true, std::memory_order_relaxed);
+
+            offset += frames;
+        }
 
         return paContinue;
     }

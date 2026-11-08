@@ -8,8 +8,9 @@ set(SOURCES
 		producer/proaudio_producer.cpp
 		producer/proaudio_producer.h
 
-                util/device_util.cpp
-                util/device_util.h
+		util/device_util.cpp
+		util/device_util.h
+		util/ring_buffer.h
 		proaudio.cpp
 		proaudio.h
 )
@@ -22,5 +23,6 @@ target_link_libraries(proaudio PRIVATE PortAudio::PortAudio)
 
 set_target_properties(proaudio PROPERTIES FOLDER modules)
 source_group(sources\\consumer consumer/*)
+source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)

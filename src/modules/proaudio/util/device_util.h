@@ -57,9 +57,9 @@ class pa_library
     pa_library(const pa_library&)            = delete;
     pa_library& operator=(const pa_library&) = delete;
 
-    inline static std::mutex             mutex_;
+    inline static std::mutex                mutex_;
     inline static std::condition_variable   condition_;
-    inline static std::weak_ptr<pa_library> instance_;
+    inline static std::weak_ptr<pa_library>  instance_;
     inline static bool                      initialized_ = false;
 
   public:
