@@ -156,7 +156,7 @@ class route_producer
     caspar::timer consume_timer_;
 
     std::shared_ptr<route>  route_;
-    std::shared_ptr<stage>  source_stage_;
+    std::weak_ptr<stage>    source_stage_;
     const video_format_desc format_desc_;
 
     std::optional<buffered_frame>                                frame_;
@@ -172,6 +172,14 @@ class route_producer
 
     int get_source_channel() const override { return source_channel_; }
     int get_source_layer() const override { return source_layer_; }
+
+    int source_audio_channels() const
+    {
+        const auto source = source_stage_.lock();
+        if (!source)
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Route source channel is no longer available."));
+        return source->video_format_desc().audio_channels;
+    }
 
     // set the buffer depth to 2 for cross-channel routes, 1 otherwise
     void set_cross_channel(bool cross) override
@@ -222,8 +230,7 @@ class route_producer
         }
 
         try {
-            auto mapping = parse_route_audio_mapping(
-                value, source_stage_->video_format_desc().audio_channels, format_desc_.audio_channels);
+            auto mapping = parse_route_audio_mapping(value, source_audio_channels(), format_desc_.audio_channels);
             std::atomic_store_explicit(&audio_mapping_,
                                        std::make_shared<const std::vector<int>>(std::move(mapping)),
                                        std::memory_order_release);
@@ -284,8 +291,7 @@ class route_producer
             route_->signal.connect([weak_self](const core::draw_frame& frame1, const core::draw_frame& frame2) {
                 if (auto self = weak_self.lock()) {
                     const auto mapping = std::atomic_load_explicit(&self->audio_mapping_, std::memory_order_acquire);
-                    const auto source_format = self->source_stage_->video_format_desc();
-                    self->tag_fix_.set_audio_mapping(mapping, source_format.audio_channels);
+                    self->tag_fix_.set_audio_mapping(mapping, self->source_audio_channels());
                     auto frame1b = frame1;
                     if (!frame1b) {
                         // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
@@ -386,7 +392,8 @@ class route_producer
             state["route/layer"] = source_layer_;
         }
         state["route/audio-map"] = audio_mapping_text();
-        state["route/source-audio-channels"] = source_stage_->video_format_desc().audio_channels;
+        const auto source                    = source_stage_.lock();
+        state["route/source-audio-channels"] = source ? source->video_format_desc().audio_channels : 0;
 
         return state;
     }
