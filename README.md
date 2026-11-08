@@ -284,6 +284,12 @@ Capture conversion and matrix mixing remain on engine threads; the input device
 callback only maps samples into preallocated scratch storage and the shared
 FIFO. Independent capture/output clocks still require on-site drift testing;
 this feature does not add asynchronous sample-rate correction.
+The first positive audio read on playback or resume discards queued capture
+from loading/paused time. That read can be silent until fresh input arrives;
+zero-sample background previews do not consume the reset. Omitted device maps
+use only the smaller engine/device channel count, with unused engine capture
+channels silent. Explicit capture maps may repeat a physical input; explicit
+output maps must have unique destinations.
 
 License
 ---------

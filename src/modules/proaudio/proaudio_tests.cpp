@@ -51,6 +51,53 @@ void tick(PaStream* stream, int samples)
     mock->callback(nullptr, output.data(), samples, nullptr, 0, mock->user);
 }
 
+#ifdef TEST_CAPTURE
+class test_factory final : public caspar::core::frame_factory
+{
+  public:
+    caspar::core::mutable_frame create_frame(const void* tag, const caspar::core::pixel_format_desc& desc) override
+    {
+        std::vector<caspar::array<uint8_t>> image;
+        for (const auto& plane : desc.planes)
+            image.emplace_back(std::vector<uint8_t>(plane.size));
+        return caspar::core::mutable_frame(tag, std::move(image), {}, desc);
+    }
+    caspar::core::mutable_frame
+    create_frame(const void* tag, const caspar::core::pixel_format_desc& desc, caspar::common::bit_depth) override
+    {
+        return create_frame(tag, desc);
+    }
+#ifdef WIN32
+    caspar::core::const_frame import_d3d_texture(const void*,
+                                                 const std::shared_ptr<caspar::accelerator::d3d::d3d_texture2d>&,
+                                                 caspar::core::pixel_format,
+                                                 caspar::common::bit_depth) override
+    {
+        throw std::runtime_error("No D3D texture needed for capture tests");
+    }
+#endif
+};
+
+class capture_pcm final : public caspar::core::frame_visitor
+{
+  public:
+    std::vector<int32_t> audio;
+    void                 push(const caspar::core::frame_transform&) override {}
+    void                 pop() override {}
+    void                 visit(const caspar::core::const_frame& frame) override
+    {
+        audio.assign(frame.audio_data().begin(), frame.audio_data().end());
+    }
+};
+
+void capture_tick(PaStream* stream, int samples, int16_t value)
+{
+    auto*                mock = static_cast<mock_stream*>(stream);
+    std::vector<int16_t> input(static_cast<std::size_t>(samples) * mock->channels, value);
+    mock->callback(input.data(), nullptr, samples, nullptr, 0, mock->user);
+}
+#endif
+
 } // namespace
 
 extern "C" {
@@ -191,6 +238,35 @@ int main()
         for (auto& thread : threads)
             thread.join();
         check(!lifetime_overlap && libraries == 0, "PortAudio initialization overlapped teardown");
+#ifdef TEST_CAPTURE
+        format.audio_cadence = {1920};
+        {
+            auto              factory = spl::make_shared<test_factory>();
+            proaudio_producer producer(factory, format, "", "", "", 512, 10);
+            check(producer.channel_map_.size() == 2, "stereo capture identity map failed");
+            capture_tick(producer.stream_, 512, 123);
+            producer.first_frame(core::video_field::progressive);
+            check(producer.stale_capture_, "zero-sample background preview consumed freshness reset");
+            capture_pcm captured;
+            producer.receive_impl(core::video_field::progressive, 16).accept(captured);
+            check(std::all_of(captured.audio.begin(), captured.audio.end(), [](int32_t v) { return v == 0; }),
+                  "initial playback leaked queued capture");
+            capture_tick(producer.stream_, 16, -123);
+            producer.receive_impl(core::video_field::progressive, 16).accept(captured);
+            for (std::size_t n = 0; n < captured.audio.size(); ++n)
+                check(captured.audio[n] == (n % 8 < 2 ? -123 * 65536 : 0),
+                      "capture padding or signed conversion failed");
+            producer.last_frame(core::video_field::progressive);
+            for (int n = 0; n < 100; ++n)
+                capture_tick(producer.stream_, 512, 999);
+            producer.receive_impl(core::video_field::progressive, 16).accept(captured);
+            check(std::all_of(captured.audio.begin(), captured.audio.end(), [](int32_t v) { return v == 0; }),
+                  "resume leaked stale paused capture");
+            capture_tick(producer.stream_, 16, 321);
+            producer.receive_impl(core::video_field::progressive, 16).accept(captured);
+            check(captured.audio[0] == 321 * 65536, "capture did not recover after resume");
+        }
+#endif
         std::cout << "Proaudio mocked device, lifecycle and playback clock tests passed\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

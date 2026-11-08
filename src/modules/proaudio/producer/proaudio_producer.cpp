@@ -72,6 +72,7 @@ struct proaudio_producer : public core::frame_producer
     std::unique_ptr<frame_ring_buffer> ring_;
     std::atomic<bool>                  dropout_{false};
     std::atomic<bool>                  device_overflow_{false};
+    bool                               stale_capture_ = true;
 
   public:
     explicit proaudio_producer(spl::shared_ptr<core::frame_factory> frame_factory,
@@ -96,6 +97,11 @@ struct proaudio_producer : public core::frame_producer
         graph_->set_color("dropout", color(0.9, 0.6, 0.3));
         diagnostics::register_graph(graph_);
 
+        if (format_desc_.audio_channels <= 0 || format_desc_.audio_sample_rate <= 0 ||
+            format_desc_.audio_cadence.empty() ||
+            *std::min_element(format_desc_.audio_cadence.begin(), format_desc_.audio_cadence.end()) <= 0)
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Invalid PortAudio capture audio format"));
+
         channel_map_ = parse_channel_map(channel_map_param_, format_desc_.audio_channels);
         if (channel_map_.empty())
             CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("CHANNEL_MAP resolved to no channels"));
@@ -115,6 +121,10 @@ struct proaudio_producer : public core::frame_producer
                                                "Specify DEVICE_NAME/HOST_API explicitly."));
 
         device_name_for_print_ = info->name;
+        if (channel_map_param_.empty() && channel_map_.size() > static_cast<std::size_t>(info->maxInputChannels))
+            channel_map_.resize(static_cast<std::size_t>(info->maxInputChannels));
+        if (channel_map_.empty())
+            CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Selected device has no input channels"));
 
         auto max_source_channel = *std::max_element(channel_map_.begin(), channel_map_.end());
         if (max_source_channel > info->maxInputChannels)
@@ -193,8 +203,18 @@ struct proaudio_producer : public core::frame_producer
 
     // frame_producer
 
+    core::draw_frame last_frame(const core::video_field field) override
+    {
+        stale_capture_ = true;
+        return core::frame_producer::last_frame(field);
+    }
+
     core::draw_frame receive_impl(const core::video_field field, int nb_samples) override
     {
+        if (nb_samples > 0 && stale_capture_) {
+            ring_->discard();
+            stale_capture_ = false;
+        }
         auto n_map = channel_map_.size();
 
         std::vector<std::int16_t> captured(static_cast<std::size_t>(nb_samples) * n_map);
@@ -214,7 +234,7 @@ struct proaudio_producer : public core::frame_producer
             for (std::size_t channel = 0; channel < n_map; ++channel) {
                 auto source   = static_cast<std::size_t>(sample) * n_map + channel;
                 auto target   = static_cast<std::size_t>(sample) * output_channels + channel;
-                audio[target] = static_cast<std::int32_t>(captured[source]) << 16;
+                audio[target] = static_cast<std::int32_t>(captured[source]) * 65536;
             }
         }
 

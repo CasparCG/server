@@ -92,7 +92,7 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.
 
--DENABLE_PROAUDIO=ON - enable the optional PortAudio multi-channel audio consumer (default OFF).
+-DENABLE_PROAUDIO=ON - enable the optional PortAudio multi-channel audio producer and consumer (default OFF).
 On Linux, install the PortAudio development package (`portaudio19-dev` on Ubuntu).
 Windows builds fetch PortAudio automatically; optionally set `-DPROAUDIO_ASIO_SDK_PATH`
 to a locally obtained ASIO SDK root to enable ASIO.
@@ -105,7 +105,8 @@ audio callbacks remove the consumer so the channel can fall back to another cloc
 regression tests. Matrix processing uses the engine's PCM interface and requires
 no PortAudio hardware for these tests. Tests are OFF by default. With
 `ENABLE_PROAUDIO=ON`, `proaudio_tests` additionally exercises mocked device
-selection, map validation, concurrent library lifetime and playback clock cadence:
+selection, map validation, concurrent library lifetime, playback clock cadence,
+and stale capture removal on startup/resume:
 
 ```sh
 cmake --build build --target route_audio_mapping_tests audio_matrix_tests
