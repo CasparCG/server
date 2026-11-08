@@ -317,6 +317,8 @@ struct proaudio_consumer : public core::frame_consumer
 
     std::wstring name() const override { return L"proaudio"; }
 
+    bool needs_host_frame() const override { return false; }
+
     bool has_synchronization_clock() const override { return true; }
 
     int index() const override { return 520; }

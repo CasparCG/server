@@ -65,6 +65,172 @@ Development
 
 See [BUILDING](BUILDING.md) for instructions on how to build the CasparCG Server from source manually.
 
+Native route audio mapping
+--------------------------
+
+Native `route://` producers pass audio through unchanged unless `AUDIO_MAP` is
+specified at creation. Entries use `destination=source` with zero-based audio
+channel indices. When a map is active, destination channels not listed are
+silent. Source channel buffers are not modified.
+The same creation option works with `LOAD` and `LOADBG`; it is native route
+processing, not the FFmpeg producer's `AF` option.
+
+```text
+PLAY 5-10 route://1 AUDIO_MAP "0=0,1=1"
+PLAY 5-20 route://2 AUDIO_MAP "2=0,3=1"
+PLAY 5-30 route://3 AUDIO_MAP "4=0,5=1"
+PLAY 5-40 route://4 AUDIO_MAP "6=0,7=1"
+```
+
+Change a playing route without replacing its producer using `CALL`. This
+atomically takes effect on the next source frame pair, after already queued
+route audio has drained; `DEFAULT` restores normal
+passthrough. Calling `AUDIO_MAP` without a value returns the current setting.
+The effective mapping is also reported as `route/audio-map` in producer state.
+
+```text
+CALL 5-20 AUDIO_MAP "2=4,3=5"
+CALL 5-20 AUDIO_MAP
+CALL 5-20 AUDIO_MAP DEFAULT
+```
+
+Audio changes are sample-immediate at that frame boundary, with no fade or
+additional buffering. Switching between unrelated waveforms can click; use a
+short gain ramp in the controlling workflow when click-free transitions are
+required.
+Explicitly mapped routes mute repeated late frames rather than replaying stale
+audio, while preserving their video. Default passthrough retains legacy behavior.
+
+The FFmpeg consumer uses the channel's audio layout as its input. The following
+consumer filter selects the mapped first eight channels as an eight-channel
+7.1 stream, while keeping the route producers and video output continuous:
+
+```text
+ADD 5 FILE multiview.mkv -codec:v ffv1 -codec:a pcm_s24le -filter:a pan=7.1|FL=c0|FR=c1|FC=c2|LFE=c3|BL=c4|BR=c5|SL=c6|SR=c7
+```
+
+This eight-channel output example requires an FFmpeg build with the Matroska,
+FFV1, and PCM encoders. The `pan` filter is applied by CasparCG's FFmpeg
+consumer before encoding; it reduces the consumer's channel-format input to
+the eight routed channels.
+
+On-site verification: play a 16-channel PCM test file with a distinct tone on
+each source channel, create the four routes above, and record the FFmpeg
+consumer output. Run:
+
+```text
+ffprobe -v error -select_streams a:0 -show_entries stream=channels,channel_layout -of default=nw=1 multiview.mkv
+```
+
+It should report eight channels. The filter uses 7.1 channel ordering, but
+Matroska PCM may report the layout as `unknown`; use audio indices, not speaker
+labels, to identify monitoring pairs. Measure/listen to each output channel to
+confirm that routes 1-4 occupy only output pairs 1-2, 3-4,
+5-6, and 7-8.
+Change route 2 with the `CALL` example and verify that only output channels 3-4
+change on the next routed frame; try an invalid map and verify both the AMCP
+error and unchanged effective mapping, then restore with `DEFAULT`. Keep a
+source SDI output and its OSC meters active during this test and confirm they
+are unchanged. Finally, test source loss/recovery and run a sustained 59.94
+source-to-destination test while checking for stale audio, drift, or cadence
+errors.
+
+Channel audio matrix
+--------------------
+
+`MIXER <channel> AUDIO_MATRIX` provides independent weighted mixes for each
+configured output audio channel. It works with normal media, native routes,
+and the interleaved PCM interfaces of the pro-audio producer/consumer in
+upstream CasparCG/server#1809 and CasparCG/server#1806. Device callbacks and
+their one-based device `CHANNEL_MAP` options are unchanged.
+The pro-audio consumer opts out of GPU-to-host video readback; its device channel
+map is applied to the channel's final matrix PCM, not to individual producers.
+
+```text
+MIXER 5 AUDIO_MATRIX 0 "5:10:0:POST:1,5:20:4:PRE:0.5"
+MIXER 5 AUDIO_MATRIX 1 "5:10:1:POST:1,5:20:5:PRE:0.5"
+MIXER 5 AUDIO_MATRIX 2 "1:10:4:PRE:1"
+MIXER 5 AUDIO_MATRIX 3 "1:10:5:PRE:1"
+MIXER 5 AUDIO_MATRIX 4 "2:*:0:POST:1"
+MIXER 5 AUDIO_MATRIX 5 "2:*:1:POST:1"
+MIXER 5 AUDIO_MATRIX 6 SILENCE
+MIXER 5 AUDIO_MATRIX 7 SILENCE
+```
+
+Each input is `source-channel:source-layer:audio-index:PRE|POST:linear-gain`.
+Server channel and layer numbers use normal AMCP addressing. Destination and
+source audio indices are zero-based. Gains are finite values from -16 to 16;
+negative values invert polarity. Inputs add together; one input may feed many
+outputs. Up to 64 inputs per output and 64 distinct source buses per destination
+channel are supported.
+
+`PRE` bypasses the outer layer's `MIXER VOLUME`, including layer-fader mute.
+`POST` respects it and its existing gain ramps. Both retain producer/transition
+audio transforms, including paused-frame silence. `*` selects the entire source
+stage: PRE sums before each layer fader, POST sums after those faders. Neither tap
+includes the source channel's master volume or matrix output: these are
+**pre-master, pre-matrix** taps, preventing matrix feedback even between channels.
+The destination master volume applies after the selected mix.
+Layer taps see the producer's actual PCM, including any route `AUDIO_MAP` already
+applied; use the original source channel/layer to select channels discarded by a
+route's explicit map.
+
+Only explicitly configured destinations are overridden. Other destinations
+keep their legacy audio sum exactly; an explicit empty bus (`SILENCE`) is silent.
+Updates replace a complete destination bus atomically at a channel processing
+boundary, keeping the same source FIFO when a bus's gains/selections change.
+No producer, video stream, or consumer is recreated. Invalid updates leave the
+previous configuration in place. Use:
+
+```text
+MIXER 5 AUDIO_MATRIX
+MIXER 5 AUDIO_MATRIX 2 DEFAULT
+MIXER 5 AUDIO_MATRIX DEFAULT
+INFO 5
+```
+
+The query returns the accepted configuration. `INFO`/OSC exposes the processing
+configuration at `mixer/audio-matrix`, and destination audio meters reflect the
+actual matrix output. Per-output `DEFAULT` restores legacy summing on that output;
+bare `DEFAULT` restores legacy summing on the entire channel.
+
+Cross-channel taps transfer only PCM through preallocated single-writer,
+single-reader FIFOs. They do not create route producers, copy pixel data, or
+render source video for the tap. Source producers still produce their normal
+frames for other users; a source channel with no consumers does not run its
+image compositor just to supply audio. Taps mix on engine channel threads, not
+PortAudio callback threads.
+
+All sources and destinations must use the same sample rate; mismatches are
+rejected rather than silently resampled. Different video rates/field cadences
+are accommodated by sample-count FIFO consumption, including 1080i5994 to
+1080p5994. FIFO capacity is the next power of two above twice the source's largest
+field audio cadence minus one. This bounds queued audio to roughly two to four
+source field periods, not a configurable video buffer. Independent clocks can
+still drift: underflow inserts silence and overflow discards queued stale PCM
+at the next read; diagnostics report `audio-matrix-underflow/overflow`.
+No asynchronous clock-drift correction or click-free crosspoint ramp is added.
+
+Absent layers and missing audio publish silence; stopping a source thread drains
+only bounded queued PCM before silence. Changes to source PCM channel count or
+sample rate mute the affected tap and report `audio-matrix-format`. Reissue its
+matrix configuration to create a tap for the new format. Producer and bus mixing
+retain the engine's signed 32-bit saturation; keep adequate headroom when summing
+several loud inputs. Video format changes with unchanged PCM dimensions are safe.
+
+Automated tests cover deterministic four-pair isolation, weighted summing,
+PRE/POST faders, fan-out, legacy/silent outputs, source-buffer isolation, missing
+audio/recovery, format changes, overflow recovery, FIFO concurrency and 6,000
+59.94 ticks (4,804,800 PCM frames), including interlaced-to-progressive transport.
+Threaded channel tests exercise live matrix and native route updates, invalid
+updates, unchanged producer/consumer instances, and audio-only sources without
+compositing their video. They are engine tests, not a
+hardware synchronization guarantee. On site, repeat the route verification above
+using matrix commands, both pro-audio devices, source channels without consumers,
+and a prolonged independent-clock test. Verify audio channel layout with the
+same eight-channel FFmpeg consumer filter, and check no program SDI audio or
+source meters change while updating destination mixes.
+
 License
 ---------
 
