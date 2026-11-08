@@ -30,12 +30,14 @@ class audio_tap
               int                                         layer,
               bool                                        post,
               const video_format_desc&                    format,
-              spl::shared_ptr<caspar::diagnostics::graph> graph);
+              spl::shared_ptr<caspar::diagnostics::graph> graph,
+              int                                         maximum_read_samples = 0);
 
     const int               channel;
     const int               layer;
     const bool              post;
     const video_format_desc format;
+    const int               maximum_read_samples;
 
     void publish(const draw_frame& frame, const video_format_desc& current_format, int nb_samples);
     const std::vector<int32_t>& read(int nb_samples);

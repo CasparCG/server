@@ -259,13 +259,13 @@ struct video_channel::impl final
         }
     }
 
-    std::shared_ptr<core::audio_tap> audio_tap(int layer, bool post)
+    std::shared_ptr<core::audio_tap> audio_tap(int layer, bool post, int maximum_read_samples)
     {
         const auto format = stage_->video_format_desc();
         if (format.audio_channels <= 0 || format.audio_cadence.empty() || format.audio_sample_rate <= 0) {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Source has no valid audio format."));
         }
-        auto                        tap = std::make_shared<core::audio_tap>(index(), layer, post, format, graph_);
+        auto tap = std::make_shared<core::audio_tap>(index(), layer, post, format, graph_, maximum_read_samples);
         std::lock_guard<std::mutex> lock(audio_taps_mutex_);
         auto                        next = std::make_shared<std::vector<std::weak_ptr<core::audio_tap>>>();
         for (const auto& existing : *std::atomic_load(&audio_taps_)) {
@@ -287,6 +287,10 @@ struct video_channel::impl final
         if (destination < 0 || destination >= format.audio_channels || (sources && sources->size() > 64)) {
             CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid AUDIO_MATRIX output or input count."));
         }
+        if (format.audio_cadence.empty()) {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid AUDIO_MATRIX destination cadence."));
+        }
+        const int maximum_read_samples = *std::max_element(format.audio_cadence.begin(), format.audio_cadence.end());
         std::lock_guard<std::mutex> lock(audio_matrix_mutex_);
         const auto                  current = std::atomic_load(&audio_matrix_);
         auto next = current ? std::make_shared<audio_matrix_config>(*current) : std::make_shared<audio_matrix_config>();
@@ -312,7 +316,7 @@ struct video_channel::impl final
                 std::shared_ptr<core::audio_tap> tap;
                 const auto                       find_tap = [&](const audio_matrix_input& input) {
                     if (input.source.channel == source.channel && input.source.layer == source.layer &&
-                        input.source.post == source.post &&
+                        input.source.post == source.post && input.tap->maximum_read_samples >= maximum_read_samples &&
                         input.tap->format.audio_channels == source_format.audio_channels &&
                         input.tap->format.audio_sample_rate == source_format.audio_sample_rate) {
                         tap = input.tap;
@@ -329,7 +333,7 @@ struct video_channel::impl final
                     find_tap(input);
                 }
                 if (!tap) {
-                    tap = (*channel)->audio_tap(source.layer, source.post);
+                    tap = (*channel)->audio_tap(source.layer, source.post, maximum_read_samples);
                 }
                 if (source.audio_channel >= tap->format.audio_channels ||
                     tap->format.audio_sample_rate != format.audio_sample_rate) {
@@ -435,7 +439,10 @@ core::monitor::state video_channel::state() const
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
 
-std::shared_ptr<audio_tap> video_channel::audio_tap(int layer, bool post) { return impl_->audio_tap(layer, post); }
+std::shared_ptr<audio_tap> video_channel::audio_tap(int layer, bool post, int maximum_read_samples)
+{
+    return impl_->audio_tap(layer, post, maximum_read_samples);
+}
 void                       video_channel::configure_audio_matrix(int                                                    destination,
                                            const std::optional<std::vector<audio_matrix_source>>& sources,
                                            const std::vector<spl::shared_ptr<video_channel>>&     channels)

@@ -50,10 +50,12 @@ std::vector<int> parse_channel_map(const std::string& str, int default_channels)
 
     std::stringstream ss(str);
     std::string       item;
+    if (str.back() == ',')
+        throw std::invalid_argument("CHANNEL_MAP contains an empty entry");
     while (std::getline(ss, item, ',')) {
         boost::trim(item);
         if (item.empty())
-            continue;
+            throw std::invalid_argument("CHANNEL_MAP contains an empty entry");
 
         std::size_t pos   = 0;
         auto        value = std::stoi(item, &pos);
@@ -75,6 +77,22 @@ find_device(device_direction direction, const std::string& device_name, const st
 
     auto target_name = clean_name(device_name);
     auto target_api   = clean_name(host_api_name);
+    if ((!device_name.empty() && target_name.empty()) || (!host_api_name.empty() && target_api.empty()))
+        CASPAR_THROW_EXCEPTION(invalid_operation()
+                               << msg_info("Device/host-api name contains no searchable characters"));
+
+    if (device_name.empty()) {
+        for (PaHostApiIndex api = 0; api < Pa_GetHostApiCount(); ++api) {
+            auto info = Pa_GetHostApiInfo(api);
+            if (info && clean_name(info->name).find(target_api) != std::string::npos) {
+                auto device = is_output ? info->defaultOutputDevice : info->defaultInputDevice;
+                if (device == paNoDevice)
+                    CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Selected host API has no default device"));
+                return device;
+            }
+        }
+        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Invalid PortAudio host API: '" + host_api_name + "'"));
+    }
 
     std::vector<std::string> available;
     auto                     count = Pa_GetDeviceCount();
@@ -115,15 +133,27 @@ pa_library::pa_library()
                                << msg_info(std::string("Failed to initialize PortAudio: ") + Pa_GetErrorText(err)));
 }
 
-pa_library::~pa_library() { Pa_Terminate(); }
+pa_library::~pa_library()
+{
+    std::lock_guard guard{mutex_};
+    Pa_Terminate();
+    initialized_ = false;
+    condition_.notify_all();
+}
 
 std::shared_ptr<pa_library> pa_library::acquire()
 {
-    std::lock_guard guard{mutex_};
+    std::unique_lock guard{mutex_};
 
     auto shared = instance_.lock();
-    if (!shared)
+    while (!shared && initialized_) {
+        condition_.wait(guard);
+        shared = instance_.lock();
+    }
+    if (!shared) {
         instance_ = shared = std::shared_ptr<pa_library>{new pa_library()};
+        initialized_       = true;
+    }
 
     return shared;
 }

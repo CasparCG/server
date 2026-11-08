@@ -7,6 +7,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <cmath>
+#include <iomanip>
 #include <limits>
 #include <map>
 #include <sstream>
@@ -15,7 +16,7 @@ namespace caspar { namespace core {
 
 namespace {
 
-std::size_t tap_capacity(const video_format_desc& format)
+std::size_t tap_capacity(const video_format_desc& format, int maximum_read_samples)
 {
     if (format.audio_channels <= 0 || format.audio_sample_rate <= 0 || format.audio_cadence.empty()) {
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid AUDIO_MATRIX source audio format."));
@@ -24,7 +25,8 @@ std::size_t tap_capacity(const video_format_desc& format)
     if (maximum <= 0) {
         CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid AUDIO_MATRIX source audio cadence."));
     }
-    return static_cast<std::size_t>(maximum) * 2 - 1;
+    return static_cast<std::size_t>(std::max(maximum, maximum_read_samples)) * 2 + static_cast<std::size_t>(maximum) -
+           1;
 }
 
 } // namespace
@@ -73,14 +75,16 @@ audio_tap::audio_tap(int                                         channel,
                      int                                         layer,
                      bool                                        post,
                      const video_format_desc&                    format,
-                     spl::shared_ptr<caspar::diagnostics::graph> graph)
+                     spl::shared_ptr<caspar::diagnostics::graph> graph,
+                     int                                         maximum_read_samples)
     : channel(channel)
     , layer(layer)
     , post(post)
     , format(format)
+    , maximum_read_samples(maximum_read_samples)
     , graph_(std::move(graph))
-    , mixer_(graph_, false)
-    , buffer_(tap_capacity(format), static_cast<std::size_t>(format.audio_channels))
+    , mixer_(spl::make_shared<diagnostics::graph>(), false)
+    , buffer_(tap_capacity(format, maximum_read_samples), static_cast<std::size_t>(format.audio_channels))
 {
 }
 
@@ -125,7 +129,8 @@ const std::vector<int32_t>& audio_tap::read(int nb_samples)
 std::wstring audio_matrix_config::text() const
 {
     std::wstringstream result;
-    bool               first_output = true;
+    result << std::setprecision(std::numeric_limits<double>::max_digits10);
+    bool first_output = true;
     for (std::size_t destination = 0; destination < outputs.size(); ++destination) {
         if (!outputs[destination]) {
             continue;

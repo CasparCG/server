@@ -99,8 +99,13 @@ class test_producer final : public caspar::core::frame_producer
     }
     caspar::core::draw_frame receive_impl(caspar::core::video_field, int samples) override
     {
+        while (stalled.load()) {
+            entered.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         return frame(this, samples, channels_, base_);
     }
+    std::atomic<bool> stalled{false}, entered{false};
     caspar::core::monitor::state state() const override { return {}; }
     std::wstring                 name() const override { return L"pcm-test"; }
     std::wstring                 print() const override { return name(); }
@@ -223,6 +228,28 @@ void channel_integration()
     await(100);
     check(destination->stage()->foreground(30).get().get() == route.get(), "route CALL recreated producer");
     check(consumer->initializations.load() == 1, "route CALL recreated consumer");
+
+    destination->stage()->call(30, {L"AUDIO_MAP", L"0=4,1=5"}).get();
+    await(104);
+    input->stalled.store(true);
+    while (!input->entered.load())
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    destination->stage()->call(30, {L"AUDIO_MAP", L"DEFAULT"}).get();
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    const bool muted_repeat = consumer->first.load() == 0 && consumer->second.load() == 0;
+    input->stalled.store(false);
+    check(muted_repeat, "DEFAULT replayed previously buffered mapped audio while source was late");
+    destination->stage()->call(30, {L"AUDIO_MAP", L"0=4,1=5"}).get();
+    auto narrow           = format;
+    narrow.audio_channels = 2;
+    source->stage()->stop(10).get();
+    source->stage()->video_format_desc(narrow).get();
+    source->stage()->load(10, spl::make_shared<test_producer>(2, 2000)).get();
+    source->stage()->play(10).get();
+    await(0);
+    destination->stage()->call(30, {L"AUDIO_MAP", L"0=1,1=0"}).get();
+    await(2001);
+    check(consumer->second.load() == 2000, "route used stale source PCM stride after format change");
 }
 
 } // namespace
@@ -355,6 +382,37 @@ int main()
             }
         }
         check(total == 4804800, "i-to-p sustained sample count incorrect");
+
+        auto fast           = repository.find(L"1080p6000");
+        fast.audio_channels = 8;
+        auto slow           = repository.find(L"1080p2500");
+        slow.audio_channels = 8;
+        audio_tap rate_tap(1, 10, true, fast, graph, slow.audio_cadence.front());
+        int       queued = 0;
+        for (int tick = 0; tick < 2500; ++tick) {
+            while (queued < slow.audio_cadence.front()) {
+                rate_tap.publish(frame(&tags[0], fast.audio_cadence.front(), 8, 700), fast, fast.audio_cadence.front());
+                queued += fast.audio_cadence.front();
+            }
+            const auto& pcm = rate_tap.read(slow.audio_cadence.front());
+            for (std::size_t scalar = 0; scalar < pcm.size(); ++scalar)
+                check(pcm[scalar] == 700 + scalar % 8, "60-to-25 tap overflowed or corrupted PCM");
+            queued -= slow.audio_cadence.front();
+        }
+
+        matrix.outputs.assign(8, std::nullopt);
+        matrix.outputs[0] = std::vector<audio_matrix_input>{{{1, 10, 0, false, 0.12345678901234567}, pre}};
+        const auto text   = matrix.text();
+        check(parse_audio_matrix_sources(text.substr(text.find(L'=') + 1)).front().gain ==
+                  matrix.outputs[0]->front().source.gain,
+              "matrix state lost gain precision");
+
+        meters.update_meter(array<const int32_t>(std::vector<int32_t>(8, 0)), 8);
+        frame(&tags[0], samples, 8, std::numeric_limits<int32_t>::max() - 8).accept(meters);
+        meters(format, samples, false);
+        const auto meter_state = meters.state();
+        for (const auto& value : meter_state.begin()->second)
+            check(boost::get<int32_t>(value) == 0, "legacy mix updated meters before matrix overrides");
 
         const auto parsed = parse_audio_matrix_sources(L"1:10:0:PRE:0.5,2:*:7:POST:-1");
         check(parsed.size() == 2 && parsed[1].layer == -1 && parsed[1].gain == -1, "matrix syntax parsing failed");

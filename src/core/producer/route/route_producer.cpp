@@ -32,6 +32,7 @@
 #include <core/frame/frame_visitor.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/stage.h>
 #include <core/video_channel.h>
 
 #include <boost/regex.hpp>
@@ -72,9 +73,10 @@ class fix_stream_tag : public frame_visitor
 
     void push(const frame_transform& transform) { frames_stack_.emplace(transform, std::vector<core::draw_frame>()); }
 
-    void set_audio_mapping(std::shared_ptr<const std::vector<int>> audio_mapping)
+    void set_audio_mapping(std::shared_ptr<const std::vector<int>> audio_mapping, int source_audio_channels)
     {
         audio_mapping_ = std::move(audio_mapping);
+        source_audio_channels_ = source_audio_channels;
     }
 
     void visit(const const_frame& frame)
@@ -139,17 +141,25 @@ class route_producer
     , public route_control
     , public std::enable_shared_from_this<route_producer>
 {
+    struct buffered_frame
+    {
+        draw_frame first;
+        draw_frame second;
+        bool       audio_mapped;
+    };
+
     spl::shared_ptr<diagnostics::graph> graph_;
 
-    tbb::concurrent_bounded_queue<std::pair<core::draw_frame, core::draw_frame>> buffer_;
+    tbb::concurrent_bounded_queue<buffered_frame> buffer_;
 
     caspar::timer produce_timer_;
     caspar::timer consume_timer_;
 
     std::shared_ptr<route>  route_;
+    std::shared_ptr<stage>  source_stage_;
     const video_format_desc format_desc_;
 
-    std::optional<std::pair<core::draw_frame, core::draw_frame>> frame_;
+    std::optional<buffered_frame>                                frame_;
     int                                                          source_channel_;
     int                                                          source_layer_;
     fix_stream_tag                                               tag_fix_;
@@ -181,8 +191,10 @@ class route_producer
                    video_format_desc      format_desc,
                    int                    buffer,
                    int                    source_channel,
-                   int                    source_layer)
+                   int                    source_layer,
+                   std::shared_ptr<stage> source_stage)
         : route_(route)
+        , source_stage_(std::move(source_stage))
         , format_desc_(format_desc)
         , source_channel_(source_channel)
         , source_layer_(source_layer)
@@ -210,8 +222,8 @@ class route_producer
         }
 
         try {
-            auto mapping =
-                parse_route_audio_mapping(value, route_->format_desc.audio_channels, format_desc_.audio_channels);
+            auto mapping = parse_route_audio_mapping(
+                value, source_stage_->video_format_desc().audio_channels, format_desc_.audio_channels);
             std::atomic_store_explicit(&audio_mapping_,
                                        std::make_shared<const std::vector<int>>(std::move(mapping)),
                                        std::memory_order_release);
@@ -271,8 +283,9 @@ class route_producer
         connection_ =
             route_->signal.connect([weak_self](const core::draw_frame& frame1, const core::draw_frame& frame2) {
                 if (auto self = weak_self.lock()) {
-                    self->tag_fix_.set_audio_mapping(
-                        std::atomic_load_explicit(&self->audio_mapping_, std::memory_order_acquire));
+                    const auto mapping = std::atomic_load_explicit(&self->audio_mapping_, std::memory_order_acquire);
+                    const auto source_format = self->source_stage_->video_format_desc();
+                    self->tag_fix_.set_audio_mapping(mapping, source_format.audio_channels);
                     auto frame1b = frame1;
                     if (!frame1b) {
                         // We got a frame, so ensure it is a real frame (otherwise the layer gets confused)
@@ -292,7 +305,7 @@ class route_producer
                         frame2b = self->tag_fix_(frame2b);
                     }
 
-                    if (!self->buffer_.try_push(std::make_pair(frame1b, frame2b))) {
+                    if (!self->buffer_.try_push({frame1b, frame2b, mapping != nullptr})) {
                         self->graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
                     }
                     self->graph_->set_value("produce-time",
@@ -305,7 +318,7 @@ class route_producer
     draw_frame last_frame(const core::video_field field) override
     {
         if (!frame_) {
-            std::pair<core::draw_frame, core::draw_frame> frame;
+            buffered_frame frame;
             if (buffer_.try_pop(frame)) {
                 frame_ = frame;
             }
@@ -334,7 +347,7 @@ class route_producer
         }
 
         if (field == core::video_field::a || field == core::video_field::progressive) {
-            std::pair<core::draw_frame, core::draw_frame> frame;
+            buffered_frame frame;
             if (!buffer_.try_pop(frame)) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
                 late_frame_ = true;
@@ -352,11 +365,9 @@ class route_producer
         }
 
         if (field == core::video_field::b) {
-            return late_frame_ && std::atomic_load(&audio_mapping_) ? core::draw_frame::still(frame_->second)
-                                                                    : frame_->second;
+            return late_frame_ && frame_->audio_mapped ? core::draw_frame::still(frame_->second) : frame_->second;
         } else {
-            return late_frame_ && std::atomic_load(&audio_mapping_) ? core::draw_frame::still(frame_->first)
-                                                                    : frame_->first;
+            return late_frame_ && frame_->audio_mapped ? core::draw_frame::still(frame_->first) : frame_->first;
         }
     }
 
@@ -375,6 +386,7 @@ class route_producer
             state["route/layer"] = source_layer_;
         }
         state["route/audio-map"] = audio_mapping_text();
+        state["route/source-audio-channels"] = source_stage_->video_format_desc().audio_channels;
 
         return state;
     }
@@ -412,7 +424,7 @@ spl::shared_ptr<core::frame_producer> create_route_producer(const core::frame_pr
 
     auto buffer = get_param(L"BUFFER", params, 0);
     auto rp     = spl::make_shared<route_producer>(
-        (*channel_it)->route(layer, mode), dependencies.format_desc, buffer, channel, layer);
+        (*channel_it)->route(layer, mode), dependencies.format_desc, buffer, channel, layer, (*channel_it)->stage());
     if (contains_param(L"AUDIO_MAP", params)) {
         rp->set_audio_mapping(get_param(L"AUDIO_MAP", params));
     }

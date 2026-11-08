@@ -95,7 +95,7 @@ class video_channel final
     [[nodiscard]] channel_info get_consumer_channel_info() const;
 
     std::shared_ptr<core::route> route(int index = -1, route_mode mode = route_mode::foreground);
-    std::shared_ptr<class audio_tap> audio_tap(int layer, bool post);
+    std::shared_ptr<class audio_tap> audio_tap(int layer, bool post, int maximum_read_samples = 0);
     void                             configure_audio_matrix(int                                                           destination,
                                                             const std::optional<std::vector<struct audio_matrix_source>>& sources,
                                                             const std::vector<spl::shared_ptr<video_channel>>&            channels);
