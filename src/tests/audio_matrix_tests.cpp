@@ -1,4 +1,3 @@
-#include "audio_matrix.h"
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <core/consumer/frame_consumer.h>
@@ -6,6 +5,7 @@
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
+#include <core/mixer/audio/audio_matrix.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/frame_producer.h>
@@ -100,8 +100,13 @@ class test_producer final : public caspar::core::frame_producer
     }
     caspar::core::draw_frame receive_impl(caspar::core::video_field, int samples) override
     {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (stalled.load()) {
             entered.store(true);
+            if (std::chrono::steady_clock::now() >= deadline) {
+                stalled.store(false);
+                throw std::runtime_error("stalled test producer exceeded its five-second deadline");
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         return frame(this, samples, channels_, base_);
@@ -234,8 +239,13 @@ void channel_integration()
     destination->stage()->call(30, {L"AUDIO_MAP", L"0=4,1=5"}).get();
     await(104);
     input->stalled.store(true);
-    while (!input->entered.load())
+    const auto stall_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!input->entered.load() && std::chrono::steady_clock::now() < stall_deadline)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    if (!input->entered.load()) {
+        input->stalled.store(false);
+        throw std::runtime_error("test source did not enter its stall within five seconds");
+    }
     destination->stage()->call(30, {L"AUDIO_MAP", L"DEFAULT"}).get();
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     const bool muted_repeat = consumer->first.load() == 0 && consumer->second.load() == 0;
@@ -256,11 +266,18 @@ void channel_integration()
 
 } // namespace
 
-int main()
+int main(int argc, char** argv)
 {
     using namespace caspar;
     using namespace caspar::core;
     try {
+        check(argc == 2 && (std::string(argv[1]) == "--unit" || std::string(argv[1]) == "--module"),
+              "use --unit for PCM logic or --module for headless channel/route integration");
+        if (std::string(argv[1]) == "--module") {
+            channel_integration();
+            std::cout << "Headless audio channel and route integration tests passed\n";
+            return 0;
+        }
         auto                    graph = spl::make_shared<diagnostics::graph>();
         video_format_repository repository;
         auto                    format                    = repository.find(L"1080p5000");
@@ -463,7 +480,6 @@ int main()
             check(pcm[0] == value && pcm[1] == -value, "concurrent FIFO corruption");
         }
         writer.join();
-        channel_integration();
         std::cout << "Audio matrix PCM, tap, cadence and FIFO tests passed\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

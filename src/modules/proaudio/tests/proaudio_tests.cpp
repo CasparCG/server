@@ -1,7 +1,7 @@
-#include "consumer/proaudio_consumer.cpp"
+#include "../consumer/proaudio_consumer.cpp"
 
-#if __has_include("producer/proaudio_producer.cpp")
-#include "producer/proaudio_producer.cpp"
+#if __has_include("../producer/proaudio_producer.cpp")
+#include "../producer/proaudio_producer.cpp"
 #define TEST_CAPTURE
 #endif
 

@@ -57,7 +57,7 @@ jobs:
                   cmake --build dist --config Release --target route_audio_mapping_tests audio_matrix_tests proaudio_tests --parallel
                   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                   $env:PATH = "$(Resolve-Path dist/shell/Release);$env:PATH"
-                  ctest --test-dir dist -C Release --output-on-failure -R "route_audio_mapping_samples|audio_matrix_samples|proaudio_mock_samples"
+                  ctest --test-dir dist -C Release --output-on-failure -L "unit|module"
                   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
             - uses: actions/upload-artifact@v7
