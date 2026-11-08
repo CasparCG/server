@@ -112,13 +112,44 @@ selection, map validation, concurrent library lifetime and playback clock cadenc
 
 ```sh
 cmake --build build --target route_audio_mapping_tests audio_matrix_tests
-ctest --test-dir build --output-on-failure -R 'route_audio_mapping_samples|audio_matrix_samples'
+ctest --test-dir build --output-on-failure -L unit
+ctest --test-dir build --output-on-failure -L module
 ```
 
 ```sh
 cmake --build build --target proaudio_tests
-ctest --test-dir build --output-on-failure -R proaudio_mock_samples
+ctest --test-dir build --output-on-failure -L module
 ```
+
+### Audio test tiers and harness compatibility
+
+These tests follow the tier names and locations proposed in the
+[CasparCG testing discussion](https://casparcgforum.org/t/ai-fatigue-turnround-times-of-prs-and-automated-tests/7632/8).
+Core tests live in `src/tests/`. `unit` covers route-map parsing/remapping and
+deterministic matrix PCM, gains, meters, cadence and FIFO logic.
+`module` runs headless channel/native-route integration with a fake image mixer,
+deterministic producers and a capturing consumer. It creates routes through the
+native producer factory and controls them through the stage, but does not test
+AMCP parsing. It is not a `compositor` test: no real OGL/Vulkan accelerator is
+exercised. No `e2e`, GPU, CEF or hardware test is registered, so none is silently
+skipped or presented as passing. Existing graphics libraries are link dependencies,
+not runtime accelerator requirements.
+
+Both tier commands are non-interactive and return failure exit codes. Every CTest
+case has a 60-second process timeout covering setup, execution and teardown.
+Failure output is available with `--output-on-failure`; full runner output is in
+`build/Testing/Temporary/LastTest.log`. Controlled source-stall waits also have
+five-second deadlines. Keep the regression tests committed with the behavior
+they verify; do not delete or weaken them without explicitly documenting why.
+
+This is alignment with the proposal, not the completed proposed harness. The
+repository does not yet provide GoogleTest or `caspar_test_support`. Per-call
+and destructor deadlines with thread-stack dumps, unexpected-background-log
+capture, automatic thread/frame/file-handle leak accounting, and standardized
+ASan/TSan jobs remain future shared infrastructure. Current checks do not claim
+those guarantees. Migrate these cases to that harness when it is available;
+real accelerator parity and installed-server AMCP tests belong in the
+`compositor` and pytest `e2e` tiers respectively.
 
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
