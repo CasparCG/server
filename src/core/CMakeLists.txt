@@ -15,6 +15,7 @@ set(SOURCES
 		frame/geometry.cpp
 
 		mixer/audio/audio_mixer.cpp
+		mixer/audio/audio_matrix.cpp
 		mixer/image/blend_modes.cpp
 		mixer/mixer.cpp
 
@@ -50,6 +51,7 @@ set(HEADERS
 		frame/pixel_format.h
 
 		mixer/audio/audio_mixer.h
+		mixer/audio/audio_matrix.h
 
 		mixer/image/blend_modes.h
 		mixer/image/image_mixer.h
@@ -60,6 +62,7 @@ set(HEADERS
 
 		producer/color/color_producer.h
 		producer/separated/separated_producer.h
+		producer/route/route_audio_mapping.h
 		producer/transition/transition_producer.h
 		producer/transition/sting_producer.h
 		producer/route/route_producer.h

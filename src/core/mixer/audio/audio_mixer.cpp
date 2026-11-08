@@ -65,9 +65,11 @@ struct audio_mixer::impl
     bool                                        has_variable_cadence_{false};
     std::vector<int32_t>                        silence_buffer_;
     int                                         channels_{0};
+    const bool                                  hold_underflow_;
 
-    impl(spl::shared_ptr<diagnostics::graph> graph)
+    impl(spl::shared_ptr<diagnostics::graph> graph, bool hold_underflow)
         : graph_(std::move(graph))
+        , hold_underflow_(hold_underflow)
     {
         graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
         graph_->set_color("audio-clipping", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -97,7 +99,7 @@ struct audio_mixer::impl
 
     float get_master_volume() { return master_volume_; }
 
-    array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples)
+    array<const int32_t> mix(const video_format_desc& format_desc, int nb_samples, bool meter)
     {
         if (format_desc_ != format_desc) {
             audio_streams_.clear();
@@ -177,7 +179,7 @@ struct audio_mixer::impl
                     sample_value = static_cast<double>(last_ptr[n]);
                 } else if (n < last_size + item_size) {
                     sample_value = static_cast<double>(ptr[n - last_size]);
-                } else {
+                } else if (hold_underflow_) {
                     // If we run out of samples, hold the last sample value per channel
                     int channel_pos = n % channels_;
                     int offset      = int(item_size) - (channels_ - channel_pos);
@@ -250,10 +252,20 @@ struct audio_mixer::impl
             }
         }
 
-        auto max = std::vector<int32_t>(channels_, std::numeric_limits<int32_t>::min());
-        for (size_t n = 0; n < result.size(); n += channels_) {
-            for (int ch = 0; ch < channels_; ++ch) {
-                max[ch] = std::max(max[ch], std::abs(result[n + ch]));
+        array<const int32_t> audio(std::move(result));
+        if (meter)
+            update_meter(audio, channels_);
+        return audio;
+    }
+
+    void update_meter(const array<const int32_t>& audio, int channels)
+    {
+        auto max = std::vector<int32_t>(channels, 0);
+        for (size_t n = 0; n < audio.size(); n += channels) {
+            for (int ch = 0; ch < channels; ++ch) {
+                const auto magnitude = std::min<int64_t>(std::abs(static_cast<int64_t>(audio.data()[n + ch])),
+                                                         std::numeric_limits<int32_t>::max());
+                max[ch]              = std::max(max[ch], static_cast<int32_t>(magnitude));
             }
         }
 
@@ -265,13 +277,11 @@ struct audio_mixer::impl
 
         graph_->set_value("volume",
                           static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
-
-        return std::move(result);
     }
 };
 
-audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph)
-    : impl_(new impl(std::move(graph)))
+audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph, bool hold_underflow)
+    : impl_(new impl(std::move(graph), hold_underflow))
 {
 }
 void                 audio_mixer::push(const frame_transform& transform) { impl_->push(transform); }
@@ -279,10 +289,14 @@ void                 audio_mixer::visit(const const_frame& frame) { impl_->visit
 void                 audio_mixer::pop() { impl_->pop(); }
 void                 audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float                audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
-array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples)
+array<const int32_t> audio_mixer::operator()(const video_format_desc& format_desc, int nb_samples, bool meter)
 {
-    return impl_->mix(format_desc, nb_samples);
+    return impl_->mix(format_desc, nb_samples, meter);
 }
 core::monitor::state audio_mixer::state() const { return impl_->state_; }
+void                 audio_mixer::update_meter(const array<const int32_t>& audio, int channels)
+{
+    impl_->update_meter(audio, channels);
+}
 
 }} // namespace caspar::core
