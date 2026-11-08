@@ -40,6 +40,17 @@ int main()
     }
     check(rejected);
 
+    for (const auto& value :
+         {L"", L"0", L"0==1", L"-1=0", L"0=-1", L"0=8", L"0=0,", L",0=0", L"0=0,,1=1", L"999999999999999999999=0"}) {
+        rejected = false;
+        try {
+            parse_route_audio_mapping(value, 8, 8);
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        check(rejected);
+    }
+
     rejected = false;
     try {
         parse_route_audio_mapping(L"8=0", 8, 8);

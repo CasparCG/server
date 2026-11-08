@@ -184,21 +184,31 @@ array<const int32_t> mix_audio_matrix(const array<const int32_t>& legacy,
     }
 
     std::vector<int32_t> result(legacy.begin(), legacy.end());
+    struct input_pcm
+    {
+        const int32_t* data;
+        int            stride;
+        double         gain;
+    };
+    std::vector<input_pcm> inputs;
     for (int destination = 0; destination < format.audio_channels; ++destination) {
         if (static_cast<std::size_t>(destination) >= config.outputs.size() || !config.outputs[destination]) {
             continue;
         }
+        inputs.clear();
+        for (const auto& input : *config.outputs[destination]) {
+            if (input.tap->format.audio_sample_rate != format.audio_sample_rate || !input.tap->format_valid() ||
+                input.source.audio_channel < 0 || input.source.audio_channel >= input.tap->format.audio_channels) {
+                continue;
+            }
+            inputs.push_back({buses.at(input.tap.get())->data() + input.source.audio_channel,
+                              input.tap->format.audio_channels,
+                              input.source.gain});
+        }
         for (int sample = 0; sample < nb_samples; ++sample) {
             double mixed = 0;
-            for (const auto& input : *config.outputs[destination]) {
-                if (input.tap->format.audio_sample_rate != format.audio_sample_rate || !input.tap->format_valid() ||
-                    input.source.audio_channel < 0 || input.source.audio_channel >= input.tap->format.audio_channels) {
-                    continue;
-                }
-                const auto& bus = *buses.at(input.tap.get());
-                mixed += bus[static_cast<std::size_t>(sample) * input.tap->format.audio_channels +
-                             input.source.audio_channel] *
-                         input.source.gain;
+            for (const auto& input : inputs) {
+                mixed += input.data[static_cast<std::size_t>(sample) * input.stride] * input.gain;
             }
             mixed *= master_volume;
             result[static_cast<std::size_t>(sample) * format.audio_channels + destination] =

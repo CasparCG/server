@@ -28,12 +28,13 @@ void check(bool condition, const char* message)
     }
 }
 
-caspar::core::draw_frame frame(const void* tag, int samples, int channels, int base)
+caspar::core::draw_frame frame(const void* tag, int samples, int channels, int base, bool sequence = false)
 {
     std::vector<int32_t> pcm(static_cast<std::size_t>(samples) * channels);
     for (int sample = 0; sample < samples; ++sample) {
         for (int channel = 0; channel < channels; ++channel) {
-            pcm[static_cast<std::size_t>(sample) * channels + channel] = base + channel;
+            pcm[static_cast<std::size_t>(sample) * channels + channel] =
+                base + channel + (sequence ? sample * channels : 0);
         }
     }
     caspar::core::pixel_format_desc desc(caspar::core::pixel_format::bgra);
@@ -105,7 +106,7 @@ class test_producer final : public caspar::core::frame_producer
         }
         return frame(this, samples, channels_, base_);
     }
-    std::atomic<bool> stalled{false}, entered{false};
+    std::atomic<bool>            stalled{false}, entered{false};
     caspar::core::monitor::state state() const override { return {}; }
     std::wstring                 name() const override { return L"pcm-test"; }
     std::wstring                 print() const override { return name(); }
@@ -194,6 +195,7 @@ void channel_integration()
     await(0);
     destination->configure_audio_matrix(0, std::vector<audio_matrix_source>{}, channels);
     await(0);
+    check(destination->audio_matrix_state() == L"0=SILENCE", "silence update did not replace the active mapping");
     destination->clear_audio_matrix();
     await(1000);
     check(destination->stage()->foreground(20).get().get() == producer.get(), "matrix recreated producer");
@@ -321,6 +323,10 @@ int main()
               "matrix saturation failed");
         audio_mixer meters(graph);
         meters.update_meter(mixed, 8);
+        const auto final_meter = meters.state();
+        check(boost::get<int32_t>(final_meter.begin()->second[0]) == std::numeric_limits<int32_t>::max() &&
+                  boost::get<int32_t>(final_meter.begin()->second[1]) == std::numeric_limits<int32_t>::max(),
+              "final-output clipping peaks were not reported");
         auto source_post = std::make_shared<audio_tap>(1, 10, true, format, graph);
         source_post->publish(draw_frame::push(source), format, samples);
         check(source_post->read(samples)[0] == 1000, "matrix changed shared source audio");
@@ -348,13 +354,14 @@ int main()
         std::size_t total         = 0;
         for (int tick = 0; tick < 6000; ++tick) {
             const int count = fractional.audio_cadence[tick % fractional.audio_cadence.size()];
-            cadence_tap->publish(frame(&tags[0], count, 8, 100), fractional, count);
+            cadence_tap->publish(frame(&tags[0], count, 8, 100 + static_cast<int>(total) * 8, true), fractional, count);
             const auto& pcm = cadence_tap->read(count);
             check(pcm.size() == static_cast<std::size_t>(count) * 8, "fractional cadence size changed");
             // The existing mixer inserts one PCM frame of silence at variable-cadence startup.
             const auto start = tick == 0 ? 8 : 0;
             for (std::size_t scalar = start; scalar < pcm.size(); ++scalar) {
-                check(pcm[scalar] == 100 + scalar % 8, "fractional cadence PCM corruption");
+                check(pcm[scalar] == 100 + static_cast<int>(total * 8 + scalar) - 8,
+                      "fractional cadence PCM dropped or repeated samples");
             }
             total += count;
         }
@@ -364,18 +371,24 @@ int main()
         interlaced.audio_channels = 8;
         auto field_tap            = std::make_shared<audio_tap>(1, 10, true, interlaced, graph);
         total                     = 0;
+        int     source_cursor     = 0;
+        int64_t expected_scalar   = -1;
         for (int tick = 0; tick < 3000; ++tick) {
             const int source_count = interlaced.audio_cadence[tick % interlaced.audio_cadence.size()];
             for (int field = 0; field < 2; ++field) {
-                field_tap->publish(frame(&tags[0], source_count, 8, 100), interlaced, source_count);
+                field_tap->publish(
+                    frame(&tags[0], source_count, 8, 100 + source_cursor * 8, true), interlaced, source_count);
+                source_cursor += source_count;
             }
             for (int field = 0; field < 2; ++field) {
                 const int   count = fractional.audio_cadence[(tick * 2 + field) % fractional.audio_cadence.size()];
                 const auto& pcm   = field_tap->read(count);
                 check(pcm.size() == static_cast<std::size_t>(count) * 8, "i-to-p field cadence changed");
                 if (tick > 10) {
+                    if (expected_scalar < 0)
+                        expected_scalar = pcm.front();
                     for (std::size_t scalar = 0; scalar < pcm.size(); ++scalar) {
-                        check(pcm[scalar] == 100 + scalar % 8, "i-to-p cadence dropped or corrupted PCM");
+                        check(pcm[scalar] == expected_scalar++, "i-to-p cadence dropped or repeated PCM");
                     }
                 }
                 total += count;
@@ -388,16 +401,22 @@ int main()
         auto slow           = repository.find(L"1080p2500");
         slow.audio_channels = 8;
         audio_tap rate_tap(1, 10, true, fast, graph, slow.audio_cadence.front());
-        int       queued = 0;
+        int       queued    = 0;
+        int       published = 0, consumed = 0;
         for (int tick = 0; tick < 2500; ++tick) {
             while (queued < slow.audio_cadence.front()) {
-                rate_tap.publish(frame(&tags[0], fast.audio_cadence.front(), 8, 700), fast, fast.audio_cadence.front());
+                rate_tap.publish(frame(&tags[0], fast.audio_cadence.front(), 8, 700 + published * 8, true),
+                                 fast,
+                                 fast.audio_cadence.front());
                 queued += fast.audio_cadence.front();
+                published += fast.audio_cadence.front();
             }
             const auto& pcm = rate_tap.read(slow.audio_cadence.front());
             for (std::size_t scalar = 0; scalar < pcm.size(); ++scalar)
-                check(pcm[scalar] == 700 + scalar % 8, "60-to-25 tap overflowed or corrupted PCM");
+                check(pcm[scalar] == 700 + consumed * 8 + static_cast<int>(scalar),
+                      "60-to-25 tap dropped or repeated PCM");
             queued -= slow.audio_cadence.front();
+            consumed += slow.audio_cadence.front();
         }
 
         matrix.outputs.assign(8, std::nullopt);
