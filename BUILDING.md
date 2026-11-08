@@ -135,6 +135,16 @@ exercised. No `e2e`, GPU, CEF or hardware test is registered, so none is silentl
 skipped or presented as passing. Existing graphics libraries are link dependencies,
 not runtime accelerator requirements.
 
+ProAudio isolation tests live in `src/modules/proaudio/tests/` and use the
+`module` label. They exercise actual consumer code (and capture code on the
+producer branch) with mocked PortAudio functions; no device is opened.
+The PortAudio development dependency is needed to compile the module/tests, not
+physical hardware. These white-box regressions currently include implementation
+files and call the producer/consumer directly; they do not yet use a shared
+registry-based producer/consumer harness. Expected initialization errors are
+asserted through failure state; unexpected background errors are not
+automatically intercepted.
+
 Both tier commands are non-interactive and return failure exit codes. Every CTest
 case has a 60-second process timeout covering setup, execution and teardown.
 Failure output is available with `--output-on-failure`; full runner output is in
