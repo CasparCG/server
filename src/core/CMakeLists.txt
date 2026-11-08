@@ -15,6 +15,7 @@ set(SOURCES
 		frame/geometry.cpp
 
 		mixer/audio/audio_mixer.cpp
+		mixer/audio/audio_matrix.cpp
 		mixer/image/blend_modes.cpp
 		mixer/mixer.cpp
 
@@ -50,6 +51,7 @@ set(HEADERS
 		frame/pixel_format.h
 
 		mixer/audio/audio_mixer.h
+		mixer/audio/audio_matrix.h
 
 		mixer/image/blend_modes.h
 		mixer/image/image_mixer.h
@@ -60,6 +62,7 @@ set(HEADERS
 
 		producer/color/color_producer.h
 		producer/separated/separated_producer.h
+		producer/route/route_audio_mapping.h
 		producer/transition/transition_producer.h
 		producer/transition/sting_producer.h
 		producer/route/route_producer.h
@@ -96,3 +99,18 @@ source_group(sources\\producer\\color producer/color/*)
 source_group(sources\\producer\\route producer/route/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
+
+if(BUILD_TESTING)
+	add_executable(route_audio_mapping_tests producer/route/route_audio_mapping_tests.cpp)
+	target_compile_features(route_audio_mapping_tests PRIVATE cxx_std_20)
+	target_include_directories(route_audio_mapping_tests PRIVATE ..)
+	add_test(NAME route_audio_mapping_samples COMMAND route_audio_mapping_tests)
+	add_executable(audio_matrix_tests mixer/audio/audio_matrix_tests.cpp)
+	target_compile_features(audio_matrix_tests PRIVATE cxx_std_20)
+	target_include_directories(audio_matrix_tests PRIVATE ..)
+	target_link_libraries(audio_matrix_tests PRIVATE core common TBB::tbbmalloc)
+	if(NOT MSVC)
+		target_link_libraries(audio_matrix_tests PRIVATE ${Boost_LIBRARIES} OpenGL::GL)
+	endif()
+	add_test(NAME audio_matrix_samples COMMAND audio_matrix_tests)
+endif()

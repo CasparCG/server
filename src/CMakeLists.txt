@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Project settings
 project("CasparCG Server")
+include(CTest)
 set(CONFIG_VERSION_MAJOR 2)
 set(CONFIG_VERSION_MINOR 6)
 set(CONFIG_VERSION_BUG 0)

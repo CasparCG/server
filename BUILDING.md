@@ -101,6 +101,15 @@ The proaudio `BUFFER_SIZE` / `buffer-size` setting is clamped to 16..65536 frame
 positive; otherwise the driver chooses the size. Initialization failures or stalled
 audio callbacks remove the consumer so the channel can fall back to another clock.
 
+-DBUILD_TESTING=ON - build the native route mapping and channel audio matrix PCM
+regression tests. Matrix processing uses the engine's PCM interface and requires
+no PortAudio hardware for these tests:
+
+```sh
+cmake --build build --target route_audio_mapping_tests audio_matrix_tests
+ctest --test-dir build --output-on-failure -R 'route_audio_mapping_samples|audio_matrix_samples'
+```
+
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa

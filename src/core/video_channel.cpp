@@ -39,9 +39,13 @@
 #include <common/timer.h>
 
 #include <core/diagnostics/call_context.h>
+#include <core/frame/frame_transform.h>
+#include <core/mixer/audio/audio_matrix.h>
 #include <core/mixer/image/image_mixer.h>
 
+#include <cmath>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -74,6 +78,12 @@ struct video_channel::impl final
 
     std::map<route_id, std::weak_ptr<core::route>> routes_;
     std::mutex                                     routes_mutex_;
+
+    std::mutex                                                         audio_taps_mutex_;
+    std::shared_ptr<const std::vector<std::weak_ptr<core::audio_tap>>> audio_taps_ =
+        std::make_shared<const std::vector<std::weak_ptr<core::audio_tap>>>();
+    std::mutex                                 audio_matrix_mutex_;
+    std::shared_ptr<const audio_matrix_config> audio_matrix_;
 
     std::atomic<bool> abort_request_{false};
     std::thread       thread_;
@@ -155,17 +165,23 @@ struct video_channel::impl final
                     auto          stage_frames = (*stage_)(frame_counter_, background_routes, routesCb);
                     graph_->set_value("produce-time", produce_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
+                    const auto matrix = std::atomic_load(&audio_matrix_);
+                    publish_audio_taps(stage_frames);
+
                     // This is a little race prone, but at worst a new consumer will start with a frame of black
                     bool has_consumers = output_.consumer_count() > 0;
 
                     // Mix
                     caspar::timer mix_timer;
                     auto          mixed_frame =
-                        has_consumers ? mixer_(stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples)
-                                               : const_frame{};
+                        has_consumers
+                                     ? mixer_(
+                                  stage_frames.frames, stage_frames.format_desc, stage_frames.nb_samples, matrix.get())
+                                     : const_frame{};
                     auto mixed_frame2 =
                         has_consumers && stage_frames.format_desc.field_count == 2
-                            ? mixer_(stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples)
+                            ? mixer_(
+                                  stage_frames.frames2, stage_frames.format_desc, stage_frames.nb_samples, matrix.get())
                             : const_frame{};
                     graph_->set_value("mix-time", mix_timer.elapsed() * stage_frames.format_desc.hz * 0.5);
 
@@ -179,6 +195,7 @@ struct video_channel::impl final
                     monitor::state state = {};
                     state["stage"]       = stage_->state();
                     state["mixer"]       = mixer_.state();
+                    state["mixer"]["audio-matrix"] = matrix ? matrix->text() : L"DEFAULT";
                     state["output"]      = output_.state();
                     state["framerate"]   = {stage_frames.format_desc.framerate.numerator() *
                                                 stage_frames.format_desc.field_count,
@@ -204,6 +221,150 @@ struct video_channel::impl final
         CASPAR_LOG(info) << print() << " Uninitializing.";
         abort_request_ = true;
         thread_.join();
+    }
+
+    void publish_audio_taps(const stage_frames& frames)
+    {
+        const auto taps = std::atomic_load(&audio_taps_);
+        for (const auto& weak : *taps) {
+            const auto tap = weak.lock();
+            if (!tap) {
+                continue;
+            }
+            const auto collect = [&](const std::vector<draw_frame>& field) {
+                if (tap->layer < 0) {
+                    auto layers = field;
+                    if (!tap->post) {
+                        for (auto& layer : layers) {
+                            layer = draw_frame::pop(layer);
+                        }
+                    }
+                    return draw_frame(std::move(layers));
+                }
+                const auto it = std::find(frames.layer_indices.begin(), frames.layer_indices.end(), tap->layer);
+                if (it == frames.layer_indices.end()) {
+                    return draw_frame{};
+                }
+                const auto& layer = field[static_cast<std::size_t>(it - frames.layer_indices.begin())];
+                return layer;
+            };
+            tap->publish(collect(frames.frames), frames.format_desc, frames.nb_samples);
+            if (frames.format_desc.field_count == 2) {
+                tap->publish(collect(frames.frames2), frames.format_desc, frames.nb_samples);
+            }
+        }
+    }
+
+    std::shared_ptr<core::audio_tap> audio_tap(int layer, bool post)
+    {
+        const auto format = stage_->video_format_desc();
+        if (format.audio_channels <= 0 || format.audio_cadence.empty() || format.audio_sample_rate <= 0) {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Source has no valid audio format."));
+        }
+        auto                        tap = std::make_shared<core::audio_tap>(index(), layer, post, format, graph_);
+        std::lock_guard<std::mutex> lock(audio_taps_mutex_);
+        auto                        next = std::make_shared<std::vector<std::weak_ptr<core::audio_tap>>>();
+        for (const auto& existing : *std::atomic_load(&audio_taps_)) {
+            if (!existing.expired()) {
+                next->push_back(existing);
+            }
+        }
+        next->push_back(tap);
+        std::atomic_store(&audio_taps_,
+                          std::shared_ptr<const std::vector<std::weak_ptr<core::audio_tap>>>(std::move(next)));
+        return tap;
+    }
+
+    void configure_audio_matrix(int                                                    destination,
+                                const std::optional<std::vector<audio_matrix_source>>& sources,
+                                const std::vector<spl::shared_ptr<video_channel>>&     channels)
+    {
+        const auto format = stage_->video_format_desc();
+        if (destination < 0 || destination >= format.audio_channels || (sources && sources->size() > 64)) {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid AUDIO_MATRIX output or input count."));
+        }
+        std::lock_guard<std::mutex> lock(audio_matrix_mutex_);
+        const auto                  current = std::atomic_load(&audio_matrix_);
+        auto next = current ? std::make_shared<audio_matrix_config>(*current) : std::make_shared<audio_matrix_config>();
+        next->outputs.resize(static_cast<std::size_t>(format.audio_channels));
+        if (!sources) {
+            next->outputs[destination] = std::nullopt;
+        } else {
+            std::vector<audio_matrix_input> inputs;
+            for (const auto& source : *sources) {
+                const auto channel = std::find_if(
+                    channels.begin(), channels.end(), [&](const auto& ch) { return ch->index() == source.channel; });
+                if (channel == channels.end()) {
+                    CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"AUDIO_MATRIX source channel does not exist."));
+                }
+                const auto source_format = (*channel)->stage()->video_format_desc();
+                if (source.layer < -1 || source.audio_channel < 0 ||
+                    source.audio_channel >= source_format.audio_channels ||
+                    source_format.audio_sample_rate != format.audio_sample_rate || !std::isfinite(source.gain) ||
+                    std::abs(source.gain) > 16) {
+                    CASPAR_THROW_EXCEPTION(user_error()
+                                           << msg_info(L"Invalid AUDIO_MATRIX source index, gain or sample rate."));
+                }
+                std::shared_ptr<core::audio_tap> tap;
+                const auto                       find_tap = [&](const audio_matrix_input& input) {
+                    if (input.source.channel == source.channel && input.source.layer == source.layer &&
+                        input.source.post == source.post &&
+                        input.tap->format.audio_channels == source_format.audio_channels &&
+                        input.tap->format.audio_sample_rate == source_format.audio_sample_rate) {
+                        tap = input.tap;
+                    }
+                };
+                for (const auto& output : next->outputs) {
+                    if (output) {
+                        for (const auto& input : *output) {
+                            find_tap(input);
+                        }
+                    }
+                }
+                for (const auto& input : inputs) {
+                    find_tap(input);
+                }
+                if (!tap) {
+                    tap = (*channel)->audio_tap(source.layer, source.post);
+                }
+                if (source.audio_channel >= tap->format.audio_channels ||
+                    tap->format.audio_sample_rate != format.audio_sample_rate) {
+                    CASPAR_THROW_EXCEPTION(user_error()
+                                           << msg_info(L"AUDIO_MATRIX source format changed during update; retry."));
+                }
+                inputs.push_back({source, std::move(tap)});
+            }
+            next->outputs[destination] = std::move(inputs);
+        }
+        std::set<core::audio_tap*> taps;
+        for (const auto& output : next->outputs) {
+            if (output) {
+                for (const auto& input : *output) {
+                    taps.insert(input.tap.get());
+                }
+            }
+        }
+        if (taps.size() > 64) {
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info(L"AUDIO_MATRIX supports at most 64 source buses per channel."));
+        }
+        const bool any = std::any_of(
+            next->outputs.begin(), next->outputs.end(), [](const auto& output) { return output.has_value(); });
+        std::atomic_store(&audio_matrix_,
+                          any ? std::shared_ptr<const audio_matrix_config>(std::move(next))
+                              : std::shared_ptr<const audio_matrix_config>{});
+    }
+
+    void clear_audio_matrix()
+    {
+        std::lock_guard<std::mutex> lock(audio_matrix_mutex_);
+        std::atomic_store(&audio_matrix_, std::shared_ptr<const audio_matrix_config>{});
+    }
+
+    std::wstring audio_matrix_state() const
+    {
+        const auto matrix = std::atomic_load(&audio_matrix_);
+        return matrix ? matrix->text() : L"DEFAULT";
     }
 
     std::shared_ptr<core::route> route(int index = -1, route_mode mode = route_mode::foreground)
@@ -269,5 +430,15 @@ core::monitor::state video_channel::state() const
 }
 
 std::shared_ptr<route> video_channel::route(int index, route_mode mode) { return impl_->route(index, mode); }
+
+std::shared_ptr<audio_tap> video_channel::audio_tap(int layer, bool post) { return impl_->audio_tap(layer, post); }
+void                       video_channel::configure_audio_matrix(int                                                    destination,
+                                           const std::optional<std::vector<audio_matrix_source>>& sources,
+                                           const std::vector<spl::shared_ptr<video_channel>>&     channels)
+{
+    impl_->configure_audio_matrix(destination, sources, channels);
+}
+void         video_channel::clear_audio_matrix() { impl_->clear_audio_matrix(); }
+std::wstring video_channel::audio_matrix_state() const { return impl_->audio_matrix_state(); }
 
 }} // namespace caspar::core
