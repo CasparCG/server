@@ -66,7 +66,13 @@ struct configuration
     bool            key_only      = false;
     bool            sbs_key       = false;
     aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
-    bool            vsync         = false;
+#ifdef __APPLE__
+    // macOS: queue frames to the display refresh, otherwise frames whose arrival phase is close to
+    // a refresh are shown twice / skipped (the channel and the display run on separate clocks).
+    bool vsync = true;
+#else
+    bool vsync = false;
+#endif
     bool            interactive   = true;
     bool            borderless    = false;
     bool            always_on_top = false;

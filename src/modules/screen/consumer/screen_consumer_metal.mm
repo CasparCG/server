@@ -72,14 +72,6 @@ struct caspar_screen_window_state
 @end
 
 @implementation CasparScreenView
-- (CALayer*)makeBackingLayer
-{
-    return [CAMetalLayer layer];
-}
-- (BOOL)wantsUpdateLayer
-{
-    return YES;
-}
 - (BOOL)acceptsFirstResponder
 {
     return YES;
@@ -405,7 +397,10 @@ struct screen_consumer
           [window setFrame:frame display:NO];
 
           CasparScreenView* view = [[CasparScreenView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
-          view.wantsLayer        = YES;
+          // Layer-hosting view (layer assigned before wantsLayer): AppKit does not manage or redraw the
+          // layer, so presenting from the render thread is not disturbed by main thread / window activity.
+          view.layer      = [CAMetalLayer layer];
+          view.wantsLayer = YES;
           window.contentView     = view;
 
           layer                 = (CAMetalLayer*)view.layer;
