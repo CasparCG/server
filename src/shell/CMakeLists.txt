@@ -23,6 +23,10 @@ if (MSVC)
 			shell.rc
 			windows_specific.cpp
 	)
+elseif (APPLE)
+	list(APPEND SOURCES
+			macos_specific.cpp
+	)
 else ()
 	list(APPEND SOURCES
 			linux_specific.cpp
@@ -81,6 +85,15 @@ if (MSVC)
 		d3d9.lib
 		d3d11.lib
 		dxgi.lib
+	)
+elseif (APPLE)
+	target_link_libraries(casparcg
+		${Boost_LIBRARIES}
+		${FFMPEG_LIBRARIES}
+		ICU::i18n
+		ICU::uc
+		z
+		"-framework CoreFoundation"
 	)
 else ()
 	target_link_libraries(casparcg

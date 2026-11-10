@@ -262,21 +262,30 @@ struct server::impl
         using boost::property_tree::wptree;
         using namespace boost::asio::ip;
 
-#ifdef ENABLE_VULKAN
-        caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::invalid;
+        using caspar::accelerator::accelerator_backend;
+
         auto accelerator = boost::to_lower_copy(pt.get(L"configuration.accelerator", L"auto"));
+        accelerator_backend backend = accelerator_backend::invalid;
         if (accelerator == L"auto") {
-            backend = caspar::accelerator::accelerator_backend::opengl;
-        } else if (accelerator == L"opengl") {
-            backend = caspar::accelerator::accelerator_backend::opengl;
-        } else if (accelerator == L"vulkan") {
-            backend = caspar::accelerator::accelerator_backend::vulkan;
-        } else {
-            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid accelerator: " + accelerator));
-        }
+#ifdef ENABLE_OPENGL
+            backend = accelerator_backend::opengl;
 #else
-        caspar::accelerator::accelerator_backend backend = caspar::accelerator::accelerator_backend::opengl;
+            backend = accelerator_backend::vulkan;
 #endif
+        }
+#ifdef ENABLE_OPENGL
+        else if (accelerator == L"opengl") {
+            backend = accelerator_backend::opengl;
+        }
+#endif
+#ifdef ENABLE_VULKAN
+        else if (accelerator == L"vulkan") {
+            backend = accelerator_backend::vulkan;
+        }
+#endif
+        else {
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid or unsupported accelerator: " + accelerator));
+        }
 
         accelerator_.set_backend(backend);
     }

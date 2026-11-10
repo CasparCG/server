@@ -24,7 +24,9 @@ class accelerator_device
 enum class accelerator_backend
 {
     invalid = 0,
+#ifdef ENABLE_OPENGL
     opengl,
+#endif
 #ifdef ENABLE_VULKAN
     vulkan,
 #endif
