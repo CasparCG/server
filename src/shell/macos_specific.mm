@@ -23,6 +23,8 @@
 
 #import <Foundation/Foundation.h>
 
+#include <cstdlib>
+
 #include <common/log.h>
 #include <exception>
 
@@ -42,6 +44,17 @@ void setup_process_scheduling()
 
 void setup_prerequisites()
 {
+    // Self-contained CasparCG.app: use the bundled MoltenVK Vulkan driver (and not e.g. one from
+    // Homebrew), unless the user explicitly selected drivers.
+    if (!std::getenv("VK_DRIVER_FILES") && !std::getenv("VK_ICD_FILENAMES")) {
+        NSString* icd = [[NSBundle mainBundle] pathForResource:@"MoltenVK_icd"
+                                                        ofType:@"json"
+                                                   inDirectory:@"vulkan/icd.d"];
+        if (icd) {
+            setenv("VK_DRIVER_FILES", icd.UTF8String, 0);
+        }
+    }
+
     // Enable utf8 console input and output
     std::wcout.sync_with_stdio(false);
     std::wcout.imbue(std::locale(""));

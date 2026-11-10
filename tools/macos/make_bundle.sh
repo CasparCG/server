@@ -48,6 +48,31 @@ if [ -f "$FONT" ]; then
     cp "$FONT" "$APP/Contents/Resources/"
 fi
 
+# Optional: bundle the NDI runtime (set NDI_LIB=/path/to/libndi.dylib, e.g. from the NDI SDK for Apple)
+if [ -n "$NDI_LIB" ] && [ -f "$NDI_LIB" ]; then
+    cp "$NDI_LIB" "$APP/Contents/Frameworks/libndi.dylib"
+fi
+
+# Make the app self-contained: copy Homebrew dylibs into Contents/Frameworks (@rpath).
+# The Vulkan loader and MoltenVK are loaded with dlopen() at runtime, so they're listed explicitly.
+BREW_PREFIX=$(brew --prefix 2>/dev/null || echo /opt/homebrew)
+python3 "$(dirname "$0")/bundle_dylibs.py" "$APP" \
+    "$BREW_PREFIX/lib/libvulkan.1.dylib" \
+    "$BREW_PREFIX/lib/libMoltenVK.dylib"
+
+# Vulkan driver manifest for the bundled MoltenVK (the loader also searches Contents/Resources/vulkan/icd.d)
+mkdir -p "$APP/Contents/Resources/vulkan/icd.d"
+cat > "$APP/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json" <<ICD
+{
+    "file_format_version" : "1.0.0",
+    "ICD": {
+        "library_path": "../../../Frameworks/libMoltenVK.dylib",
+        "api_version" : "1.4.0",
+        "is_portability_driver" : true
+    }
+}
+ICD
+
 if [ -n "$FRAMEWORK" ] && [ -d "$FRAMEWORK" ]; then
     # ditto preserves the framework layout and code signature
     ditto "$FRAMEWORK" "$APP/Contents/Frameworks/Chromium Embedded Framework.framework"
@@ -62,11 +87,6 @@ if [ -n "$FRAMEWORK" ] && [ -d "$FRAMEWORK" ]; then
             cp "$APP/Contents/MacOS/casparcg" "$HELPER/Contents/MacOS/$NAME"
         write_plist "$HELPER/Contents/Info.plist" "$NAME" "$BUNDLE_ID.helper${ID_SUFFIX:+.$ID_SUFFIX}" "$NAME"
     done
-fi
-
-# Optional: bundle the NDI runtime (set NDI_LIB=/path/to/libndi.dylib, e.g. from the NDI SDK for Apple)
-if [ -n "$NDI_LIB" ] && [ -f "$NDI_LIB" ]; then
-    cp "$NDI_LIB" "$APP/Contents/Frameworks/libndi.dylib"
 fi
 
 # Apple Silicon requires valid signatures; ad-hoc sign the bundle structure.
