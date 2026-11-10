@@ -30,6 +30,9 @@
 #include <windows.h>
 #else
 #include <dlfcn.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 #include <stdlib.h>
 #endif
 
@@ -93,6 +96,33 @@ NDIlib_v6* load_library()
         dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
         hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
     }
+
+#ifdef __APPLE__
+    if (!hNDILib) {
+        std::vector<boost::filesystem::path> candidates;
+
+        // Bundled with the app: CasparCG.app/Contents/Frameworks/libndi.dylib
+        uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+        std::string exe(size, '\0');
+        if (_NSGetExecutablePath(exe.data(), &size) == 0) {
+            candidates.push_back(boost::filesystem::path(exe.c_str()).parent_path().parent_path() / "Frameworks" /
+                                 NDILIB_LIBRARY_NAME);
+        }
+        // NDI SDK / NDI Tools default install locations
+        candidates.emplace_back("/Library/NDI SDK for Apple/lib/macOS/libndi.dylib");
+        candidates.emplace_back("/usr/local/lib/libndi.dylib");
+
+        for (const auto& candidate : candidates) {
+            if (boost::filesystem::exists(candidate)) {
+                dll_path = candidate;
+                hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+                if (hNDILib)
+                    break;
+            }
+        }
+    }
+#endif
 
     // The main NDI entry point for dynamic loading if we got the library
     const NDIlib_v6* (*NDIlib_v6_load)(void) = NULL;

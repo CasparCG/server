@@ -64,6 +64,11 @@ if [ -n "$FRAMEWORK" ] && [ -d "$FRAMEWORK" ]; then
     done
 fi
 
+# Optional: bundle the NDI runtime (set NDI_LIB=/path/to/libndi.dylib, e.g. from the NDI SDK for Apple)
+if [ -n "$NDI_LIB" ] && [ -f "$NDI_LIB" ]; then
+    cp "$NDI_LIB" "$APP/Contents/Frameworks/libndi.dylib"
+fi
+
 # Apple Silicon requires valid signatures; ad-hoc sign the bundle structure.
 codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/casparcg" >/dev/null 2>&1 || true
 for H in "$APP"/Contents/Frameworks/*.app; do
