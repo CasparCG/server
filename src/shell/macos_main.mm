@@ -25,14 +25,64 @@
 #import <Cocoa/Cocoa.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <thread>
 
 int caspar_main(int argc, char** argv);
 
+// Chromium (CEF) requires the NSApplication to implement these protocols (see CEF's
+// include/cef_application_mac.h). They are declared here to keep the shell independent of CEF;
+// the Objective-C runtime matches protocols by name.
+@protocol CrAppProtocol
+- (BOOL)isHandlingSendEvent;
+@end
+
+@protocol CrAppControlProtocol <CrAppProtocol>
+- (void)setHandlingSendEvent:(BOOL)handlingSendEvent;
+@end
+
+@protocol CefAppProtocol <CrAppControlProtocol>
+@end
+
+@interface CasparApplication : NSApplication <CefAppProtocol> {
+  @private
+    BOOL handlingSendEvent_;
+}
+@end
+
+@implementation CasparApplication
+- (BOOL)isHandlingSendEvent
+{
+    return handlingSendEvent_;
+}
+- (void)setHandlingSendEvent:(BOOL)handlingSendEvent
+{
+    handlingSendEvent_ = handlingSendEvent;
+}
+- (void)sendEvent:(NSEvent*)event
+{
+    BOOL previous      = handlingSendEvent_;
+    handlingSendEvent_ = YES;
+    [super sendEvent:event];
+    handlingSendEvent_ = previous;
+}
+@end
+
 int main(int argc, char** argv)
 {
+    // CEF sub-processes (renderer, GPU, ...) are started from the helper bundles with --type=...
+    // They run their own message loop on the main thread.
+    for (int n = 1; n < argc; ++n) {
+        if (std::strncmp(argv[n], "--type=", 7) == 0) {
+            @autoreleasepool {
+                [CasparApplication sharedApplication];
+                return caspar_main(argc, argv);
+            }
+        }
+    }
+
     @autoreleasepool {
-        [NSApplication sharedApplication];
+        [CasparApplication sharedApplication];
         // No Dock icon / menu bar, but windows can still be shown.
         [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
 

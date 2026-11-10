@@ -21,7 +21,7 @@ if(POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
 endif()
 
-set(ENABLE_HTML OFF CACHE BOOL "Enable CEF and HTML producer (not yet supported on macOS)" FORCE)
+set(ENABLE_HTML ON CACHE BOOL "Enable CEF and HTML producer")
 set(ENABLE_VULKAN ON CACHE BOOL "Enable Vulkan support" FORCE)
 set(ENABLE_OPENGL OFF CACHE BOOL "Enable the OpenGL mixer backend (requires OpenGL 4.5, unavailable on macOS)" FORCE)
 set(USE_STATIC_BOOST OFF CACHE BOOL "Use static Boost libraries")
@@ -73,6 +73,33 @@ FetchContent_Declare(vma
         DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
 )
 FetchContent_MakeAvailable(vma)
+
+if (ENABLE_HTML)
+    # Note: no macOS arm64 build of the exact Linux/Windows CEF version (150.0.22) exists on the CEF CDN,
+    # 150.0.21 is the closest one (same API version 15000).
+    casparcg_add_external_project(cef)
+    ExternalProject_Add(cef
+        URL https://cef-builds.spotifycdn.com/cef_binary_150.0.21%2Bga61e9a5%2Bchromium-150.0.7871.255_macosarm64_minimal.tar.bz2
+        URL_HASH SHA1=4057b6558bc83c93eb955b6983e00ef6361a0ffc
+        DOWNLOAD_NAME cef_binary_150.0.21+ga61e9a5+chromium-150.0.7871.255_macosarm64_minimal.tar.bz2
+        DOWNLOAD_DIR ${CASPARCG_DOWNLOAD_CACHE}
+        CMAKE_ARGS -DUSE_SANDBOX=Off -Dapi_version=15000 -DPROJECT_ARCH=arm64 -DCMAKE_OSX_ARCHITECTURES=arm64
+                   -DCMAKE_BUILD_TYPE=Release
+        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target libcef_dll_wrapper
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS "<BINARY_DIR>/libcef_dll_wrapper/libcef_dll_wrapper.a"
+    )
+    ExternalProject_Get_Property(cef SOURCE_DIR)
+    ExternalProject_Get_Property(cef BINARY_DIR)
+
+    add_library(CEF::CEF INTERFACE IMPORTED)
+    target_compile_definitions(CEF::CEF INTERFACE CEF_API_VERSION=15000)
+    target_include_directories(CEF::CEF INTERFACE "${SOURCE_DIR}")
+    # libcef itself is a framework loaded at runtime (cef_load_library), only the wrapper is linked.
+    target_link_libraries(CEF::CEF INTERFACE "${BINARY_DIR}/libcef_dll_wrapper/libcef_dll_wrapper.a")
+
+    set(CEF_FRAMEWORK_DIR "${SOURCE_DIR}/Release/Chromium Embedded Framework.framework" CACHE INTERNAL "")
+endif()
 
 SET (BOOST_INCLUDE_PATH "${Boost_INCLUDE_DIRS}")
 SET (FFMPEG_INCLUDE_PATH "${FFMPEG_INCLUDE_DIRS}")

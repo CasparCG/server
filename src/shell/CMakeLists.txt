@@ -227,3 +227,23 @@ else ()
         install(FILES casparcg.config DESTINATION "share/${CASPARCG_BINARY_NAME}")
     endif ()
 endif ()
+
+if (APPLE)
+	# Assemble CasparCG.app (required for HTML templates: CEF framework + helper bundles)
+	set(CASPARCG_APP_BUNDLE "${CMAKE_BINARY_DIR}/CasparCG.app")
+	if (ENABLE_HTML)
+		set(CASPARCG_BUNDLE_FRAMEWORK "${CEF_FRAMEWORK_DIR}")
+	else ()
+		set(CASPARCG_BUNDLE_FRAMEWORK "")
+	endif ()
+	add_custom_command(TARGET casparcg POST_BUILD
+		COMMAND "${CMAKE_SOURCE_DIR}/../tools/macos/make_bundle.sh"
+			"$<TARGET_FILE:casparcg>"
+			"${CASPARCG_APP_BUNDLE}"
+			"${CASPARCG_BUNDLE_FRAMEWORK}"
+			"${CONFIG_VERSION_MAJOR}.${CONFIG_VERSION_MINOR}.${CONFIG_VERSION_BUG}"
+		COMMENT "Creating CasparCG.app"
+		VERBATIM
+	)
+endif ()
+

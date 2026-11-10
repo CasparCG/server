@@ -12,6 +12,11 @@ set(SOURCES
 		util.h
 )
 
+if (APPLE)
+	list(APPEND SOURCES html_mac.mm html_mac.h)
+	set_source_files_properties(html_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+endif ()
+
 casparcg_add_module_project(html
 	SOURCES ${SOURCES}
 	INIT_FUNCTION "html::init"
