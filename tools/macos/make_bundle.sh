@@ -41,6 +41,13 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 cp "$EXE" "$APP/Contents/MacOS/casparcg"
 write_plist "$APP/Contents/Info.plist" casparcg "$BUNDLE_ID" CasparCG
 
+# Font used by the diagnostics window (DIAG)
+FONT="$(dirname "$0")/../../src/shell/liberation-fonts/LiberationMono-Regular.ttf"
+if [ -f "$FONT" ]; then
+    mkdir -p "$APP/Contents/Resources"
+    cp "$FONT" "$APP/Contents/Resources/"
+fi
+
 if [ -n "$FRAMEWORK" ] && [ -d "$FRAMEWORK" ]; then
     # ditto preserves the framework layout and code signature
     ditto "$FRAMEWORK" "$APP/Contents/Frameworks/Chromium Embedded Framework.framework"
