@@ -284,10 +284,9 @@ class Server:
 # measurement
 
 
-def measure(probe, ndi_lib, ndi_name, seconds, server, uhd=False):
-    samples_cpu, samples_gpu = [], []
+def run_probe(probe, ndi_lib, ndi_name, seconds, server, samples_cpu, samples_gpu):
     proc = subprocess.Popen([probe, ndi_lib, ndi_name, str(seconds), str(CLIP_FRAMES)], stdout=subprocess.PIPE,
-                            text=True)
+                            stderr=subprocess.PIPE, text=True)
     time.sleep(1.5)
     while proc.poll() is None:
         cpu = cpu_utilization(server.pids())
@@ -298,7 +297,26 @@ def measure(probe, ndi_lib, ndi_name, seconds, server, uhd=False):
             samples_gpu.append(gpu)
         time.sleep(1)
     out = proc.stdout.read().strip().splitlines()
-    result = json.loads(out[-1]) if out else {"error": "no probe output"}
+    err = proc.stderr.read().strip()
+    if out:
+        try:
+            return json.loads(out[-1])
+        except json.JSONDecodeError:
+            pass
+    return {"error": f"probe exit code {proc.returncode}, output {out[-1:] or ''} {err[-200:]}".strip()}
+
+
+def measure(probe, ndi_lib, ndi_name, seconds, server, uhd=False):
+    samples_cpu, samples_gpu = [], []
+    result = run_probe(probe, ndi_lib, ndi_name, seconds, server, samples_cpu, samples_gpu)
+    if "error" in result:
+        log(f"    probe failed ({result['error']}), retrying once")
+        if server.proc.poll() is not None:
+            result["error"] += f"; server exited with code {server.proc.returncode}"
+        else:
+            samples_cpu.clear()
+            samples_gpu.clear()
+            result = run_probe(probe, ndi_lib, ndi_name, seconds, server, samples_cpu, samples_gpu)
     result["cpu"] = round(sum(samples_cpu) / len(samples_cpu)) if samples_cpu else None
     result["gpu"] = round(sum(samples_gpu) / len(samples_gpu)) if samples_gpu else None
     nominal_fps = 1000.0 / result.get("nominal_ms", 20.0)

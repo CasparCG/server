@@ -71,13 +71,12 @@ int caspar_main(int argc, char** argv);
 int main(int argc, char** argv)
 {
     // CEF sub-processes (renderer, GPU, ...) are started from the helper bundles with --type=...
-    // They run their own message loop on the main thread.
+    // They run their own message loop on the main thread. Don't initialize AppKit here: like
+    // Chromium's own helpers they must not create an NSApplication (on macOS 26 that starts AppIntents
+    // XPC registration whose objects are later freed by Chromium's allocator, crashing the helper).
     for (int n = 1; n < argc; ++n) {
         if (std::strncmp(argv[n], "--type=", 7) == 0) {
-            @autoreleasepool {
-                [CasparApplication sharedApplication];
-                return caspar_main(argc, argv);
-            }
+            return caspar_main(argc, argv);
         }
     }
 

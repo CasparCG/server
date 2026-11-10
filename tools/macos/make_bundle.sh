@@ -31,6 +31,7 @@ write_plist() { # <path> <executable> <bundle id> <name> <is helper>
     <key>LSUIElement</key><string>1</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+$6
 </dict>
 </plist>
 PLIST
@@ -85,7 +86,10 @@ if [ -n "$FRAMEWORK" ] && [ -d "$FRAMEWORK" ]; then
         # Hard link: one copy of the binary on disk
         ln "$APP/Contents/MacOS/casparcg" "$HELPER/Contents/MacOS/$NAME" 2>/dev/null ||
             cp "$APP/Contents/MacOS/casparcg" "$HELPER/Contents/MacOS/$NAME"
-        write_plist "$HELPER/Contents/Info.plist" "$NAME" "$BUNDLE_ID.helper${ID_SUFFIX:+.$ID_SUFFIX}" "$NAME"
+        # Same as CEF's helper Info.plist template
+        write_plist "$HELPER/Contents/Info.plist" "$NAME" "$BUNDLE_ID.helper${ID_SUFFIX:+.$ID_SUFFIX}" "$NAME" 1 \
+            "    <key>LSEnvironment</key><dict><key>MallocNanoZone</key><string>0</string></dict>
+    <key>LSFileQuarantineEnabled</key><true/>"
     done
 fi
 
