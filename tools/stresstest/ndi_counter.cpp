@@ -16,6 +16,7 @@
 #include <Processing.NDI.Lib.h>
 
 #include <dlfcn.h>
+#include <signal.h>
 
 #include <algorithm>
 #include <chrono>
@@ -29,6 +30,8 @@
 int main(int argc, char** argv)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
+    // libndi may write to sockets the other side already closed; don't die on SIGPIPE
+    signal(SIGPIPE, SIG_IGN);
     if (argc < 4) {
         std::fprintf(stderr, "usage: %s <libndi.dylib> <source> <seconds> [clip frames]\n", argv[0]);
         return 1;
