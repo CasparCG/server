@@ -188,7 +188,13 @@ void terminate_handler()
 
 } // namespace caspar
 
+#ifdef __APPLE__
+// On macOS the real main() (macos_main.mm) runs the Cocoa event loop on the main thread,
+// which AppKit requires for windows, and calls this on a secondary thread.
+int caspar_main(int argc, char** argv)
+#else
 int main(int argc, char** argv)
+#endif
 {
     using namespace caspar;
 

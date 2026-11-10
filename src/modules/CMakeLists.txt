@@ -8,8 +8,8 @@ if (NOT APPLE)
 	# TODO(macos): DeckLink SDK for macOS uses CFStringRef/different interop headers
 	add_subdirectory(decklink)
 endif ()
-if (ENABLE_OPENGL)
-	# The screen consumer renders through the OpenGL accelerator (GL 4.5)
+if (ENABLE_OPENGL OR APPLE)
+	# OpenGL 4.5 consumer, or the native Metal consumer on macOS
 	add_subdirectory(screen)
 endif ()
 add_subdirectory(newtek)

@@ -21,18 +21,23 @@
 
 #include "platform_specific.h"
 
+#import <Foundation/Foundation.h>
+
 #include <common/log.h>
 #include <exception>
 
 #include <iostream>
 
-
-
 namespace caspar {
 
 void setup_process_scheduling()
 {
-    // TODO(macos): opt out of App Nap / timer coalescing (NSProcessInfo beginActivityWithOptions).
+    // Opt out of App Nap and timer coalescing: playout must keep realtime timing even when the
+    // process is in the background or the display sleeps.
+    static id<NSObject> activity = [[NSProcessInfo processInfo]
+        beginActivityWithOptions:NSActivityUserInitiated | NSActivityLatencyCritical
+                          reason:@"CasparCG realtime playout"];
+    (void)activity;
 }
 
 void setup_prerequisites()

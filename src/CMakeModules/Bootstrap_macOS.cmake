@@ -9,6 +9,8 @@ cmake_minimum_required (VERSION 3.28)
 # macOS only provides OpenGL 4.1, while the CasparCG OpenGL backend needs 4.5 (and EGL),
 # so on macOS the Vulkan backend (running on Metal through MoltenVK) is the only mixer.
 
+enable_language(OBJCXX)
+
 include(ExternalProject)
 include(FetchContent)
 

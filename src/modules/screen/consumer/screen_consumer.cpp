@@ -20,6 +20,7 @@
  */
 
 #include "screen_consumer.h"
+#include "screen_config.h"
 
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
@@ -69,52 +70,6 @@ std::unique_ptr<accelerator::ogl::shader> get_shader()
     return std::make_unique<accelerator::ogl::shader>(std::string(reinterpret_cast<const char*>(vertex_shader)),
                                                       std::string(reinterpret_cast<const char*>(fragment_shader)));
 }
-
-enum class stretch
-{
-    none,
-    uniform,
-    fill,
-    uniform_to_fill
-};
-
-struct configuration
-{
-    enum class aspect_ratio
-    {
-        aspect_4_3 = 0,
-        aspect_16_9,
-        aspect_invalid,
-    };
-
-    enum class colour_spaces
-    {
-        RGB               = 0,
-        datavideo_full    = 1,
-        datavideo_limited = 2
-    };
-
-    std::wstring    name          = L"Screen consumer";
-    int             screen_index  = 0;
-    int             screen_x      = 0;
-    int             screen_y      = 0;
-    int             screen_width  = 0;
-    int             screen_height = 0;
-    screen::stretch stretch       = screen::stretch::fill;
-    bool            windowed      = true;
-    bool            key_only      = false;
-    bool            sbs_key       = false;
-    aspect_ratio    aspect        = aspect_ratio::aspect_invalid;
-    bool            vsync         = false;
-    bool            interactive   = true;
-    bool            borderless    = false;
-    bool            always_on_top = false;
-    colour_spaces   colour_space  = colour_spaces::RGB;
-    bool            high_bitdepth = false;
-    bool            gpu_texture   = false;
-
-    timespan        delay;
-};
 
 struct frame
 {
@@ -788,55 +743,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
                                                       const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                                                       const core::channel_info& channel_info)
 {
-    if (params.empty() || !boost::iequals(params.at(0), L"SCREEN")) {
+    auto config = parse_params(params, channel_info);
+    if (!config) {
         return core::frame_consumer::empty();
     }
-
-    configuration config;
-
-    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
-
-    if (params.size() > 1) {
-        try {
-            config.screen_index = std::stoi(params.at(1));
-        } catch (...) {
-        }
-    }
-
-    config.windowed    = !contains_param(L"FULLSCREEN", params);
-    config.gpu_texture = contains_param(L"GPU", params);
-    config.key_only    = contains_param(L"KEY_ONLY", params);
-    config.sbs_key     = contains_param(L"SBS_KEY", params);
-    config.interactive = !contains_param(L"NON_INTERACTIVE", params);
-    config.borderless  = contains_param(L"BORDERLESS", params);
-
-    if (contains_param(L"NAME", params)) {
-        config.name = get_param(L"NAME", params);
-    }
-
-    if (contains_param(L"X", params)) {
-        config.screen_x = get_param(L"X", params, 0);
-    }
-    if (contains_param(L"Y", params)) {
-        config.screen_y = get_param(L"Y", params, 0);
-    }
-    if (contains_param(L"WIDTH", params)) {
-        config.screen_width = get_param(L"WIDTH", params, 0);
-    }
-    if (contains_param(L"HEIGHT", params)) {
-        config.screen_height = get_param(L"HEIGHT", params, 0);
-    }
-
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
-    }
-
-    if (contains_param(L"DELAY", params)) {
-        config.delay = timespan{ u8(get_param(L"DELAY", params, L"")) };
-    }
-
-    return spl::make_shared<screen_consumer_proxy>(config);
+    return spl::make_shared<screen_consumer_proxy>(*config);
 }
 
 spl::shared_ptr<core::frame_consumer>
@@ -845,70 +756,7 @@ create_preconfigured_consumer(const boost::property_tree::wptree&               
                               const std::vector<spl::shared_ptr<core::video_channel>>& channels,
                               const core::channel_info&                                channel_info)
 {
-    configuration config;
-
-    config.high_bitdepth = (channel_info.depth != common::bit_depth::bit8);
-
-    config.name          = ptree.get(L"name", config.name);
-    config.screen_index  = ptree.get(L"device", config.screen_index + 1) - 1;
-    config.screen_x      = ptree.get(L"x", config.screen_x);
-    config.screen_y      = ptree.get(L"y", config.screen_y);
-    config.screen_width  = ptree.get(L"width", config.screen_width);
-    config.screen_height = ptree.get(L"height", config.screen_height);
-    config.windowed      = ptree.get(L"windowed", config.windowed);
-    config.key_only      = ptree.get(L"key-only", config.key_only);
-    config.sbs_key       = ptree.get(L"sbs-key", config.sbs_key);
-    config.vsync         = ptree.get(L"vsync", config.vsync);
-    config.interactive   = ptree.get(L"interactive", config.interactive);
-    config.borderless    = ptree.get(L"borderless", config.borderless);
-    config.always_on_top = ptree.get(L"always-on-top", config.always_on_top);
-    config.gpu_texture   = ptree.get(L"gpu-texture", config.gpu_texture);
-
-    auto colour_space_value = ptree.get(L"colour-space", L"RGB");
-    config.colour_space     = configuration::colour_spaces::RGB;
-    if (colour_space_value == L"datavideo-full")
-        config.colour_space = configuration::colour_spaces::datavideo_full;
-    else if (colour_space_value == L"datavideo-limited")
-        config.colour_space = configuration::colour_spaces::datavideo_limited;
-
-    if (config.sbs_key && config.key_only) {
-        CASPAR_LOG(warning) << L" Key-only not supported with configuration of side-by-side fill and key. Ignored.";
-        config.key_only = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.sbs_key) {
-        CASPAR_LOG(warning) << L" Side-by-side fill and key not supported for DataVideo TC100/TC200. Ignored.";
-        config.sbs_key = false;
-    }
-
-    if ((config.colour_space == configuration::colour_spaces::datavideo_full ||
-         config.colour_space == configuration::colour_spaces::datavideo_limited) &&
-        config.key_only) {
-        CASPAR_LOG(warning) << L" Key only not supported for DataVideo TC100/TC200. Ignored.";
-        config.key_only = false;
-    }
-
-    auto stretch_str = ptree.get(L"stretch", L"fill");
-    if (stretch_str == L"none") {
-        config.stretch = screen::stretch::none;
-    } else if (stretch_str == L"uniform") {
-        config.stretch = screen::stretch::uniform;
-    } else if (stretch_str == L"uniform_to_fill") {
-        config.stretch = screen::stretch::uniform_to_fill;
-    }
-
-    auto aspect_str = ptree.get(L"aspect-ratio", L"default");
-    if (aspect_str == L"16:9") {
-        config.aspect = configuration::aspect_ratio::aspect_16_9;
-    } else if (aspect_str == L"4:3") {
-        config.aspect = configuration::aspect_ratio::aspect_4_3;
-    }
-
-    config.delay = timespan{ u8(ptree.get(L"delay", L"0")) };
-
-    return spl::make_shared<screen_consumer_proxy>(config);
+    return spl::make_shared<screen_consumer_proxy>(parse_ptree(ptree, channel_info));
 }
 
 }} // namespace caspar::screen

@@ -25,8 +25,10 @@ if (MSVC)
 	)
 elseif (APPLE)
 	list(APPEND SOURCES
-			macos_specific.cpp
+			macos_main.mm
+			macos_specific.mm
 	)
+	set_source_files_properties(macos_main.mm macos_specific.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 else ()
 	list(APPEND SOURCES
 			linux_specific.cpp
@@ -94,6 +96,7 @@ elseif (APPLE)
 		ICU::uc
 		z
 		"-framework CoreFoundation"
+		"-framework Cocoa"
 	)
 else ()
 	target_link_libraries(casparcg
