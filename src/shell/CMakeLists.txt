@@ -236,8 +236,11 @@ if (APPLE)
 	else ()
 		set(CASPARCG_BUNDLE_FRAMEWORK "")
 	endif ()
+	# Optional NDI runtime to bundle, e.g. -DCASPARCG_NDI_LIB=/usr/local/lib/libndi.dylib
+	set(CASPARCG_NDI_LIB "" CACHE FILEPATH "libndi.dylib to bundle into CasparCG.app (optional)")
 	add_custom_command(TARGET casparcg POST_BUILD
-		COMMAND "${CMAKE_SOURCE_DIR}/../tools/macos/make_bundle.sh"
+		COMMAND ${CMAKE_COMMAND} -E env "NDI_LIB=${CASPARCG_NDI_LIB}"
+			"${CMAKE_SOURCE_DIR}/../tools/macos/make_bundle.sh"
 			"$<TARGET_FILE:casparcg>"
 			"${CASPARCG_APP_BUNDLE}"
 			"${CASPARCG_BUNDLE_FRAMEWORK}"

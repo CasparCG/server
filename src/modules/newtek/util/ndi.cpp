@@ -90,7 +90,30 @@ NDIlib_v6* load_library()
 
 #else
     // Try to load the library
+#ifdef __APPLE__
+    // Prefer the runtime bundled in CasparCG.app/Contents/Frameworks (self-contained app), then
+    // the system-wide install (NDI Tools / NDI SDK), see below.
+    void* hNDILib = nullptr;
+    {
+        uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+        std::string exe(size, '\0');
+        if (_NSGetExecutablePath(exe.data(), &size) == 0) {
+            auto bundled = boost::filesystem::path(exe.c_str()).parent_path().parent_path() / "Frameworks" /
+                           NDILIB_LIBRARY_NAME;
+            if (boost::filesystem::exists(bundled)) {
+                dll_path = bundled;
+                hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
+            }
+        }
+    }
+    if (!hNDILib) {
+        dll_path = NDILIB_LIBRARY_NAME;
+        hNDILib  = dlopen(NDILIB_LIBRARY_NAME, RTLD_LOCAL | RTLD_LAZY);
+    }
+#else
     void* hNDILib = dlopen(NDILIB_LIBRARY_NAME, RTLD_LOCAL | RTLD_LAZY);
+#endif
 
     if (!hNDILib && runtime_dir) {
         dll_path = boost::filesystem::path(runtime_dir) / NDILIB_LIBRARY_NAME;
@@ -98,28 +121,13 @@ NDIlib_v6* load_library()
     }
 
 #ifdef __APPLE__
-    if (!hNDILib) {
-        std::vector<boost::filesystem::path> candidates;
-
-        // Bundled with the app: CasparCG.app/Contents/Frameworks/libndi.dylib
-        uint32_t size = 0;
-        _NSGetExecutablePath(nullptr, &size);
-        std::string exe(size, '\0');
-        if (_NSGetExecutablePath(exe.data(), &size) == 0) {
-            candidates.push_back(boost::filesystem::path(exe.c_str()).parent_path().parent_path() / "Frameworks" /
-                                 NDILIB_LIBRARY_NAME);
-        }
-        // NDI SDK / NDI Tools default install locations
-        candidates.emplace_back("/Library/NDI SDK for Apple/lib/macOS/libndi.dylib");
-        candidates.emplace_back("/usr/local/lib/libndi.dylib");
-
-        for (const auto& candidate : candidates) {
-            if (boost::filesystem::exists(candidate)) {
-                dll_path = candidate;
-                hNDILib  = dlopen(dll_path.c_str(), RTLD_LOCAL | RTLD_LAZY);
-                if (hNDILib)
-                    break;
-            }
+    // NDI Tools / NDI SDK default install locations
+    for (const char* candidate : {"/usr/local/lib/libndi.dylib", "/Library/NDI SDK for Apple/lib/macOS/libndi.dylib"}) {
+        if (hNDILib)
+            break;
+        if (boost::filesystem::exists(candidate)) {
+            dll_path = candidate;
+            hNDILib  = dlopen(candidate, RTLD_LOCAL | RTLD_LAZY);
         }
     }
 #endif
