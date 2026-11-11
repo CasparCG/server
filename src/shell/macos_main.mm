@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <algorithm>
 #include <thread>
 
 #include <unistd.h>
@@ -72,20 +73,258 @@ int caspar_main(int argc, char** argv);
 }
 @end
 
+// Console window, used when the app is started from Finder (no terminal): shows the server's
+// stdout / stderr and sends typed commands to its stdin, like the console window on Windows.
+@interface CasparConsole : NSObject <NSWindowDelegate, NSTextFieldDelegate>
+@property(strong) NSWindow*            window;
+@property(strong) NSTextView*          output;
+@property(strong) NSTextField*         input;
+@property(strong) NSMutableArray*      history;
+@property NSInteger                    historyIndex;
+@property(strong) NSMutableData*       pending;  // bytes read, not yet shown (guarded by @synchronized)
+@property(strong) NSMutableData*       partial;  // incomplete UTF-8 sequence at the end of a read
+@property int                          stdinWrite;
+@end
+
+static constexpr NSUInteger max_console_chars = 2'000'000;
+
+@implementation CasparConsole
+- (instancetype)init
+{
+    self = [super init];
+    if (!self) {
+        return nil;
+    }
+    _history = [NSMutableArray array];
+    _pending = [NSMutableData data];
+    _partial = [NSMutableData data];
+
+    // stdout + stderr -> pipe -> window, input field -> pipe -> stdin
+    int out[2], in[2];
+    if (pipe(out) != 0 || pipe(in) != 0) {
+        return nil;
+    }
+    dup2(out[1], STDOUT_FILENO);
+    dup2(out[1], STDERR_FILENO);
+    close(out[1]);
+    dup2(in[0], STDIN_FILENO);
+    close(in[0]);
+    _stdinWrite = in[1];
+    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+
+    [self createWindow];
+
+    // Read on a background thread and show the output in batches (at most ~30 updates per second),
+    // so that heavy logging can't flood the main thread, which also drives the screen consumer and CEF.
+    const int readFd = out[0];
+    std::thread([self, readFd] {
+        char buffer[65536];
+        while (true) {
+            const ssize_t n = read(readFd, buffer, sizeof(buffer));
+            if (n <= 0) {
+                break;
+            }
+            bool schedule;
+            @synchronized(self) {
+                schedule = self.pending.length == 0;
+                [self.pending appendBytes:buffer length:n];
+            }
+            if (schedule) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+                  [self flush];
+                });
+            }
+        }
+    }).detach();
+    return self;
+}
+
+- (void)createWindow
+{
+    NSRect frame = NSMakeRect(0, 0, 1000, 600);
+    _window      = [[NSWindow alloc]
+        initWithContentRect:frame
+                  styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable |
+                            NSWindowStyleMaskResizable
+                    backing:NSBackingStoreBuffered
+                      defer:NO];
+    _window.title                = @"CasparCG Server";
+    _window.releasedWhenClosed   = NO;
+    _window.delegate             = self;
+    _window.frameAutosaveName    = @"CasparCGConsole";
+    NSView* content              = _window.contentView;
+    const CGFloat inputHeight    = 24;
+    const CGFloat margin         = 6;
+
+    NSScrollView* scroll = [[NSScrollView alloc]
+        initWithFrame:NSMakeRect(0, inputHeight + 2 * margin, frame.size.width,
+                                 frame.size.height - inputHeight - 2 * margin)];
+    scroll.hasVerticalScroller = YES;
+    scroll.autoresizingMask    = NSViewWidthSizable | NSViewHeightSizable;
+    _output                    = [[NSTextView alloc] initWithFrame:scroll.bounds];
+    _output.editable           = NO;
+    _output.richText           = NO;
+    _output.font               = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
+    _output.textColor          = NSColor.textColor;
+    _output.backgroundColor    = NSColor.textBackgroundColor;
+    _output.autoresizingMask   = NSViewWidthSizable;
+    _output.layoutManager.allowsNonContiguousLayout = YES;
+    scroll.documentView                             = _output;
+    [content addSubview:scroll];
+
+    _input = [[NSTextField alloc]
+        initWithFrame:NSMakeRect(margin, margin, frame.size.width - 2 * margin, inputHeight)];
+    _input.font              = [NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];
+    _input.placeholderString = @"AMCP command (e.g. INFO, PLAY 1-10 AMB LOOP), q to quit";
+    _input.autoresizingMask  = NSViewWidthSizable;
+    _input.target            = self;
+    _input.action            = @selector(send:);
+    _input.delegate          = self;
+    [content addSubview:_input];
+
+    [_window center];
+    [_window makeKeyAndOrderFront:nil];
+    [_window makeFirstResponder:_input];
+}
+
+- (void)flush
+{
+    NSData* data;
+    @synchronized(self) {
+        data          = [self.pending copy];
+        self.pending.length = 0;
+    }
+    [self.partial appendData:data];
+
+    // Only decode complete UTF-8 sequences, keep a trailing partial one for the next read
+    const uint8_t* bytes  = static_cast<const uint8_t*>(self.partial.bytes);
+    NSUInteger     length = self.partial.length;
+    NSUInteger     cut    = length;
+    for (NSUInteger back = 1; back <= 3 && back <= length; ++back) {
+        const uint8_t c = bytes[length - back];
+        if ((c & 0xC0) == 0x80) {
+            continue; // continuation byte
+        }
+        if (c >= 0xC0) {
+            const NSUInteger need = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2;
+            if (back < need) {
+                cut = length - back;
+            }
+        }
+        break;
+    }
+    NSString* text = [[NSString alloc] initWithBytes:bytes length:cut encoding:NSUTF8StringEncoding];
+    if (!text) {
+        text = [[NSString alloc] initWithBytes:bytes length:cut encoding:NSISOLatin1StringEncoding];
+    }
+    [self.partial replaceBytesInRange:NSMakeRange(0, cut) withBytes:nullptr length:0];
+    [self append:text];
+}
+
+- (void)append:(NSString*)text
+{
+    if (text.length == 0) {
+        return;
+    }
+    NSScrollView* scroll   = self.output.enclosingScrollView;
+    const BOOL    atBottom = NSMaxY(scroll.documentVisibleRect) >= NSMaxY(self.output.bounds) - 20;
+
+    NSTextStorage* storage = self.output.textStorage;
+    [storage beginEditing];
+    [storage appendAttributedString:[[NSAttributedString alloc]
+                                        initWithString:text
+                                            attributes:@{
+                                                NSFontAttributeName : self.output.font,
+                                                NSForegroundColorAttributeName : NSColor.textColor
+                                            }]];
+    if (storage.length > max_console_chars) {
+        // Drop the oldest output, at a line boundary
+        NSUInteger drop = storage.length - max_console_chars * 3 / 4;
+        drop            = NSMaxRange([storage.string lineRangeForRange:NSMakeRange(drop, 0)]);
+        [storage deleteCharactersInRange:NSMakeRange(0, drop)];
+    }
+    [storage endEditing];
+
+    if (atBottom) {
+        [self.output scrollRangeToVisible:NSMakeRange(storage.length, 0)];
+    }
+}
+
+- (void)send:(id)sender
+{
+    NSString* line = self.input.stringValue;
+    if (line.length == 0) {
+        return;
+    }
+    if (self.history.count == 0 || ![self.history.lastObject isEqualToString:line]) {
+        [self.history addObject:line];
+    }
+    self.historyIndex      = self.history.count;
+    self.input.stringValue = @"";
+
+    [self append:[NSString stringWithFormat:@"> %@\n", line]];
+    NSData* data = [[line stringByAppendingString:@"\n"] dataUsingEncoding:NSUTF8StringEncoding];
+    if (write(self.stdinWrite, data.bytes, data.length) < 0) {
+        NSBeep();
+    }
+}
+
+// Up / down arrows: command history
+- (BOOL)control:(NSControl*)control textView:(NSTextView*)textView doCommandBySelector:(SEL)command
+{
+    if (command == @selector(moveUp:) || command == @selector(moveDown:)) {
+        if (self.history.count == 0) {
+            return YES;
+        }
+        NSInteger index   = self.historyIndex + (command == @selector(moveUp:) ? -1 : 1);
+        index             = std::max<NSInteger>(0, std::min<NSInteger>(index, self.history.count));
+        self.historyIndex = index;
+        self.input.stringValue = index < (NSInteger)self.history.count ? self.history[index] : @"";
+        return YES;
+    }
+    return NO;
+}
+
+- (void)show
+{
+    [self.window makeKeyAndOrderFront:nil];
+    [self.window makeFirstResponder:self.input];
+}
+@end
+
+static CasparConsole* console     = nil;
+static bool           server_done = false;
+
 @interface CasparAppDelegate : NSObject <NSApplicationDelegate>
 @end
 
 @implementation CasparAppDelegate
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication*)sender
 {
+    if (server_done) {
+        return NSTerminateNow;
+    }
     // Quit from the menu / Dock: shut the server down cleanly (same as Ctrl+C); the process exits
     // when caspar_main returns.
     std::raise(SIGTERM);
     return NSTerminateCancel;
 }
+
+// Click on the Dock icon: bring back the console window if it was closed
+- (BOOL)applicationShouldHandleReopen:(NSApplication*)sender hasVisibleWindows:(BOOL)visible
+{
+    [console show];
+    return YES;
+}
+
+- (void)showConsole:(id)sender
+{
+    [console show];
+}
 @end
 
-static void create_menu()
+static void create_menu(id delegate)
 {
     NSMenu*     bar     = [[NSMenu alloc] init];
     NSMenuItem* appItem = [[NSMenuItem alloc] init];
@@ -95,7 +334,28 @@ static void create_menu()
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Quit CasparCG" action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
-    NSApp.mainMenu  = bar;
+
+    // Edit menu, so that copy / paste / select all work in the console
+    NSMenuItem* editItem = [[NSMenuItem alloc] init];
+    [bar addItem:editItem];
+    NSMenu* editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
+    [editMenu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
+    [editMenu addItemWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
+    [editMenu addItemWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@"v"];
+    [editMenu addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
+    editItem.submenu = editMenu;
+
+    if (console) {
+        NSMenuItem* windowItem = [[NSMenuItem alloc] init];
+        [bar addItem:windowItem];
+        NSMenu*     windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+        NSMenuItem* show       = [windowMenu addItemWithTitle:@"Console" action:@selector(showConsole:) keyEquivalent:@"l"];
+        show.target            = delegate;
+        [windowMenu addItemWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+        windowItem.submenu = windowMenu;
+        NSApp.windowsMenu  = windowMenu;
+    }
+    NSApp.mainMenu = bar;
 }
 
 static bool has_config_argument(int argc, char** argv)
@@ -161,17 +421,48 @@ int main(int argc, char** argv)
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         static CasparAppDelegate* delegate = [[CasparAppDelegate alloc] init];
         NSApp.delegate                     = delegate;
-        create_menu();
 
         NSString*  workdir     = select_working_directory(argc, argv);
         const bool interactive = isatty(STDIN_FILENO);
+        if (!interactive) {
+            // Started from Finder: no terminal, so show our own console window
+            console = [[CasparConsole alloc] init];
+            if (workdir) {
+                [console append:[NSString stringWithFormat:@"Working directory: %@\n\n", workdir]];
+            }
+        }
+        create_menu(delegate);
 
         std::thread([argc, argv, workdir, interactive] {
             const int code = caspar_main(argc, argv);
             dispatch_async(dispatch_get_main_queue(), ^{
-              // 0 = quit, 5 = restart requested (handled by run.sh); anything else is an error,
-              // which nobody would see when started from Finder.
-              if (!interactive && code != 0 && code != 5) {
+              // 0 = quit, 5 = restart requested (handled by run.sh in a terminal); anything else is
+              // an error, which nobody would see when started from Finder.
+              if (!interactive && code == 5) {
+                  // RESTART command: start a new instance of the app
+                  NSWorkspaceOpenConfiguration* config = [NSWorkspaceOpenConfiguration configuration];
+                  config.createsNewApplicationInstance = YES;
+                  [[NSWorkspace sharedWorkspace]
+                      openApplicationAtURL:[NSBundle mainBundle].bundleURL
+                             configuration:config
+                         completionHandler:^(NSRunningApplication*, NSError*) {
+                           dispatch_async(dispatch_get_main_queue(), ^{
+                             std::exit(code);
+                           });
+                         }];
+                  return;
+              }
+              if (console && code != 0) {
+                  // Keep the console open, so the error can be read; the app quits with Cmd+Q
+                  server_done = true;
+                  [console flush];
+                  [console append:[NSString stringWithFormat:@"\n*** CasparCG Server stopped with an error "
+                                                             @"(exit code %d). Press Cmd+Q to quit. ***\n",
+                                                             code]];
+                  [console show];
+                  return;
+              }
+              if (!interactive && code != 0) {
                   NSString* dir = workdir ?: [[NSFileManager defaultManager] currentDirectoryPath];
                   [NSApp activateIgnoringOtherApps:YES];
                   NSAlert* alert       = [[NSAlert alloc] init];
