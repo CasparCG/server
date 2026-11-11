@@ -162,7 +162,7 @@ struct image_kernel::impl
                 default:;
             }
 
-            transforms = transforms.combine_transform(transform, params.aspect_ratio);
+            transforms.apply_scale_mode(transform.fill_scale[0], transform.fill_scale[1]);
         }
 
         coords = transforms.transform_coords(coords);
