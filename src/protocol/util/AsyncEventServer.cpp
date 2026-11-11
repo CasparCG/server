@@ -51,6 +51,8 @@ class connection : public spl::enable_shared_from_this<connection>
     const spl::shared_ptr<tcp::socket>       socket_;
     std::shared_ptr<boost::asio::io_context> io_context_;
     const std::wstring                       listen_port_;
+    // Read once: remote_endpoint() throws when the client has already gone.
+    const std::wstring                       remote_address_;
     const spl::shared_ptr<connection_set>    connection_set_;
     protocol_strategy_factory<char>::ptr     protocol_factory_;
     std::shared_ptr<protocol_strategy<char>> protocol_;
@@ -134,10 +136,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
     std::wstring address() const { return u16(socket_->local_endpoint().address().to_string()); }
 
-    std::wstring ipv4_address() const
-    {
-        return socket_->is_open() ? u16(socket_->remote_endpoint().address().to_string()) : L"no-address";
-    }
+    std::wstring ipv4_address() const { return remote_address_; }
 
     void send(std::string&& data)
     {
@@ -203,7 +202,16 @@ class connection : public spl::enable_shared_from_this<connection>
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
         , io_context_(io_context)
-        , listen_port_(socket_->is_open() ? std::to_wstring(socket_->local_endpoint().port()) : L"no-port")
+        , listen_port_([&] {
+            boost::system::error_code ec;
+            auto                      endpoint = socket_->local_endpoint(ec);
+            return ec ? std::wstring(L"no-port") : std::to_wstring(endpoint.port());
+        }())
+        , remote_address_([&] {
+            boost::system::error_code ec;
+            auto                      endpoint = socket_->remote_endpoint(ec);
+            return ec ? std::wstring(L"no-address") : u16(endpoint.address().to_string());
+        }())
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
         , is_writing_(false)
@@ -341,18 +349,23 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
             return;
 
         if (!error) {
-            boost::system::error_code ec;
-            socket->set_option(boost::asio::socket_base::keep_alive(true), ec);
+            // Whatever goes wrong with this client, keep accepting the next ones.
+            try {
+                boost::system::error_code ec;
+                socket->set_option(boost::asio::socket_base::keep_alive(true), ec);
 
-            if (ec)
-                CASPAR_LOG(warning) << print() << L" Failed to enable TCP keep-alive on socket";
+                if (ec)
+                    CASPAR_LOG(warning) << print() << L" Failed to enable TCP keep-alive on socket";
 
-            auto conn = connection::create(io_context_, socket, protocol_factory_, connection_set_);
-            connection_set_->insert(conn);
+                auto conn = connection::create(io_context_, socket, protocol_factory_, connection_set_);
+                connection_set_->insert(conn);
 
-            for (auto& lifecycle_factory : lifecycle_factories_) {
-                auto lifecycle_bound = lifecycle_factory(u8(conn->ipv4_address()));
-                conn->add_lifecycle_bound_object(lifecycle_bound.first, lifecycle_bound.second);
+                for (auto& lifecycle_factory : lifecycle_factories_) {
+                    auto lifecycle_bound = lifecycle_factory(u8(conn->ipv4_address()));
+                    conn->add_lifecycle_bound_object(lifecycle_bound.first, lifecycle_bound.second);
+                }
+            } catch (...) {
+                CASPAR_LOG_CURRENT_EXCEPTION();
             }
         }
         start_accept();
