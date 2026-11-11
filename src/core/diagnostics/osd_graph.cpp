@@ -37,7 +37,9 @@
 #include <GL/glew.h>
 
 #include <atomic>
+#include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <filesystem>
 #include <list>
 #include <memory>
@@ -45,17 +47,85 @@
 #include <optional>
 #include <thread>
 
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#include <mach-o/dyld.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
+// SFML 2 / SFML 3 compatibility helpers
 #if SFML_VERSION_MAJOR >= 3
-
-void register_sink() {}
-void show_graphs(bool value) {}
-void shutdown() {}
-
+using sf_uint8                          = std::uint8_t;
+static constexpr auto SF_LINE_STRIP     = sf::PrimitiveType::LineStrip;
+inline sf::Vertex     make_vertex(sf::Vector2f position, sf::Color color) { return sf::Vertex{position, color}; }
+inline sf::Text       make_text(const sf::String& str, const sf::Font& font, unsigned size)
+{
+    return sf::Text(font, str, size);
+}
+inline float text_width(const sf::Text& text) { return text.getLocalBounds().size.x; }
+inline bool  open_font(sf::Font& font, const fs::path& path) { return font.openFromFile(path); }
 #else
+using sf_uint8                      = sf::Uint8;
+static constexpr auto SF_LINE_STRIP = sf::LinesStrip;
+inline sf::Vertex     make_vertex(sf::Vector2f position, sf::Color color) { return sf::Vertex(position, color); }
+inline sf::Text       make_text(const sf::String& str, const sf::Font& font, unsigned size)
+{
+    return sf::Text(str, font, size);
+}
+inline float text_width(const sf::Text& text) { return text.getLocalBounds().width; }
+inline bool  open_font(sf::Font& font, const fs::path& path) { return font.loadFromFile(path.string()); }
+#endif
+
+#ifdef __APPLE__
+// AppKit only allows windows on the main thread (which runs the Cocoa event loop, see
+// shell/macos_main.mm), so on macOS the diagnostics window is driven from the main queue.
+class ui_executor
+{
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+
+    struct task
+    {
+        std::shared_ptr<std::atomic<bool>> alive;
+        std::function<void()>              func;
+    };
+
+    static void run(void* ctx)
+    {
+        std::unique_ptr<task> t(static_cast<task*>(ctx));
+        if (*t->alive)
+            t->func();
+    }
+
+  public:
+    void begin_invoke(std::function<void()> func, int delay_ms = 0)
+    {
+        auto* t = new task{alive_, std::move(func)};
+        if (delay_ms > 0) {
+            dispatch_after_f(
+                dispatch_time(DISPATCH_TIME_NOW, delay_ms * NSEC_PER_MSEC), dispatch_get_main_queue(), t, &run);
+        } else {
+            dispatch_async_f(dispatch_get_main_queue(), t, &run);
+        }
+    }
+
+    // Runs synchronously on the main thread, then stops all pending tasks.
+    void stop(std::function<void()> func)
+    {
+        auto* t = new task{alive_, std::move(func)};
+        if (pthread_main_np()) {
+            run(t);
+        } else {
+            dispatch_sync_f(dispatch_get_main_queue(), t, &run);
+        }
+        *alive_ = false;
+    }
+
+    bool is_running() const { return *alive_; }
+};
+#endif
 
 static const int PREFERRED_VERTICAL_GRAPHS = 8;
 static const int RENDERING_WIDTH           = 1024;
@@ -65,15 +135,17 @@ sf::Color get_sfml_color(int color)
 {
     auto c = caspar::diagnostics::color(color);
 
-    return {static_cast<sf::Uint8>(color >> 24 & 255),
-            static_cast<sf::Uint8>(color >> 16 & 255),
-            static_cast<sf::Uint8>(color >> 8 & 255),
-            static_cast<sf::Uint8>(color >> 0 & 255)};
+    return {static_cast<sf_uint8>(color >> 24 & 255),
+            static_cast<sf_uint8>(color >> 16 & 255),
+            static_cast<sf_uint8>(color >> 8 & 255),
+            static_cast<sf_uint8>(color >> 0 & 255)};
 }
 
 auto& get_default_font()
 {
-    static sf::Font DEFAULT_FONT = []() {
+    // Intentionally never destroyed: sf::Font must not outlive SFML's global GL context, which
+    // is torn down earlier during static destruction (crashes on exit otherwise).
+    static sf::Font& DEFAULT_FONT = *[]() {
         fs::path path{DIAG_FONT_PATH};
 #ifdef __linux__
         if (!fs::exists(path)) {
@@ -86,8 +158,24 @@ auto& get_default_font()
             }
         }
 #endif
-        sf::Font font;
-        if (!font.loadFromFile(path.string()))
+#ifdef __APPLE__
+        if (!fs::exists(path)) {
+            // Inside CasparCG.app the font is in Contents/Resources
+            uint32_t size = 0;
+            _NSGetExecutablePath(nullptr, &size);
+            std::string exe(size, '\0');
+            if (_NSGetExecutablePath(exe.data(), &size) == 0) {
+                auto bundled = fs::path(exe.c_str()).parent_path().parent_path() / "Resources" / path.filename();
+                if (fs::exists(bundled))
+                    path = bundled;
+            }
+        }
+        if (!fs::exists(path)) {
+            path = "/System/Library/Fonts/Menlo.ttc";
+        }
+#endif
+        auto font = new sf::Font();
+        if (!open_font(*font, path))
             CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(DIAG_FONT_PATH " not found"));
         return font;
     }();
@@ -121,7 +209,11 @@ class context : public drawable
     bool                               dragging_        = false;
     int                                last_mouse_y_    = 0;
 
+#ifdef __APPLE__
+    ui_executor executor_;
+#else
     executor executor_{L"diagnostics"};
+#endif
 
   public:
     static void register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -137,7 +229,15 @@ class context : public drawable
         get_instance()->executor_.begin_invoke([=] { get_instance()->do_show(value); });
     }
 
-    static void shutdown() { get_instance().reset(); }
+    static void shutdown()
+    {
+#ifdef __APPLE__
+        if (get_instance()) {
+            get_instance()->executor_.stop([] { get_instance()->window_.reset(); });
+        }
+#endif
+        get_instance().reset();
+    }
 
   private:
     context() {}
@@ -146,10 +246,15 @@ class context : public drawable
     {
         if (value) {
             if (!window_) {
+#if SFML_VERSION_MAJOR >= 3
+                window_ = std::make_unique<sf::RenderWindow>(
+                    sf::VideoMode(sf::Vector2u(RENDERING_WIDTH, RENDERING_WIDTH)), "CasparCG Diagnostics");
+#else
                 window_.reset(
                     new sf::RenderWindow(sf::VideoMode(RENDERING_WIDTH, RENDERING_WIDTH), "CasparCG Diagnostics"));
+#endif
                 window_->setPosition(sf::Vector2i(0, 0));
-                window_->setActive();
+                std::ignore = window_->setActive();
                 window_->setVerticalSyncEnabled(true);
                 calculate_view_ = true;
                 glEnable(GL_BLEND);
@@ -168,6 +273,31 @@ class context : public drawable
         if (!window_)
             return;
 
+#if SFML_VERSION_MAJOR >= 3
+        while (const auto e = window_->pollEvent()) {
+            if (e->is<sf::Event::Closed>()) {
+                window_.reset();
+                return;
+            } else if (e->is<sf::Event::Resized>()) {
+                calculate_view_ = true;
+            } else if (const auto* pressed = e->getIf<sf::Event::MouseButtonPressed>()) {
+                dragging_     = true;
+                last_mouse_y_ = pressed->position.y;
+            } else if (e->is<sf::Event::MouseButtonReleased>()) {
+                dragging_ = false;
+            } else if (const auto* moved = e->getIf<sf::Event::MouseMoved>()) {
+                if (dragging_) {
+                    auto delta_y = moved->position.y - last_mouse_y_;
+                    scroll_position_ += delta_y;
+                    last_mouse_y_   = moved->position.y;
+                    calculate_view_ = true;
+                }
+            } else if (const auto* wheel = e->getIf<sf::Event::MouseWheelScrolled>()) {
+                scroll_position_ += static_cast<int>(wheel->delta * 15);
+                calculate_view_ = true;
+            }
+        }
+#else
         sf::Event e;
         while (window_->pollEvent(e)) {
             switch (e.type) {
@@ -202,6 +332,8 @@ class context : public drawable
             }
         }
 
+#endif
+
         window_->clear();
 
         if (calculate_view_) {
@@ -212,9 +344,15 @@ class context : public drawable
             int max_scroll_position = 0;
 
             scroll_position_ = std::min(max_scroll_position, std::max(min_scroll_position, scroll_position_));
+#if SFML_VERSION_MAJOR >= 3
+            view_.setViewport(sf::FloatRect({0.f, 0.f}, {1.f, 1.f}));
+            view_.setSize({static_cast<float>(RENDERING_WIDTH), static_cast<float>(window_height)});
+            view_.setCenter({RENDERING_WIDTH / 2.f, window_height / 2.f - scroll_position_});
+#else
             view_.setViewport(sf::FloatRect(0, 0, 1.0, 1.0));
             view_.setSize(RENDERING_WIDTH, window_height);
             view_.setCenter(RENDERING_WIDTH / 2, window_height / 2 - scroll_position_);
+#endif
             window_->setView(view_);
 
             calculate_view_ = false;
@@ -225,11 +363,18 @@ class context : public drawable
         window_->display();
 
         display_time_.restart();
+#ifdef __APPLE__
+        // Don't block the main thread: reschedule instead of sleeping.
+        if (executor_.is_running()) {
+            executor_.begin_invoke([this] { tick(); }, 40);
+        }
+#else
         if (executor_.is_running()) {
             executor_.begin_invoke([this] { tick(); });
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(40));
+#endif
     }
 
     void render(sf::RenderTarget& target, sf::RenderStates states) override
@@ -240,7 +385,7 @@ class context : public drawable
             auto drawable = it->lock();
             if (drawable) {
                 float target_y = n * RENDERING_HEIGHT;
-                drawable->setPosition(0.0f, target_y);
+                drawable->setPosition(sf::Vector2f(0.0f, target_y));
                 target.draw(*drawable, states);
                 ++it;
             } else
@@ -326,14 +471,16 @@ class line : public drawable
 
         auto color = get_sfml_color(color_);
         color.a    = 255 * 0.8;
-        line_data_.push_back(sf::Vertex(
-            sf::Vector2f(get_insertion_xcoord(), std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))),
+        line_data_.push_back(make_vertex(
+            sf::Vector2f(static_cast<float>(get_insertion_xcoord()),
+                         std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))),
             color));
 
         if (tick_tag_) {
-            sf::VertexArray vertical_dash(sf::LinesStrip);
-            vertical_dash.append(sf::Vertex(sf::Vector2f(get_insertion_xcoord() - x_delta_, 0.f), color));
-            vertical_dash.append(sf::Vertex(sf::Vector2f(get_insertion_xcoord() - x_delta_, 1.f), color));
+            sf::VertexArray vertical_dash(SF_LINE_STRIP);
+            const auto      x = static_cast<float>(get_insertion_xcoord() - x_delta_);
+            vertical_dash.append(make_vertex(sf::Vector2f(x, 0.f), color));
+            vertical_dash.append(make_vertex(sf::Vector2f(x, 1.f), color));
             line_tags_.push_back(vertical_dash);
         } else
             line_tags_.push_back({});
@@ -345,12 +492,12 @@ class line : public drawable
             auto array_two = line_data_.array_two();
             // since boost::circular_buffer guarantees two contiguous views of the buffer we can provide raw access to
             // SFML, which can use glDrawArrays.
-            target.draw(array_one.first, static_cast<unsigned int>(array_one.second), sf::LinesStrip, states);
-            target.draw(array_two.first, static_cast<unsigned int>(array_two.second), sf::LinesStrip, states);
+            target.draw(array_one.first, static_cast<unsigned int>(array_one.second), SF_LINE_STRIP, states);
+            target.draw(array_two.first, static_cast<unsigned int>(array_two.second), SF_LINE_STRIP, states);
 
             if (array_one.second > 0 && array_two.second > 0) {
                 // Connect the gap between the arrays
-                sf::VertexArray connecting_line(sf::LinesStrip);
+                sf::VertexArray connecting_line(SF_LINE_STRIP);
                 connecting_line.append(*(array_one.first + array_one.second - 1));
                 connecting_line.append(*array_two.first);
                 target.draw(connecting_line, states);
@@ -430,9 +577,9 @@ struct graph
             auto_reset = auto_reset_;
         }
 
-        sf::Text text(text_str.c_str(), get_default_font(), text_size);
+        auto text = make_text(text_str.c_str(), get_default_font(), text_size);
         text.setStyle(sf::Text::Italic);
-        text.move(text_margin, text_margin);
+        text.move(sf::Vector2f(text_margin, text_margin));
 
         target.draw(text, states);
 
@@ -442,9 +589,9 @@ struct graph
             if (context_.layer != -1)
                 ctx_str += "-" + std::to_string(context_.layer);
 
-            sf::Text context_text(ctx_str, get_default_font(), text_size);
+            auto context_text = make_text(ctx_str, get_default_font(), text_size);
             context_text.setStyle(sf::Text::Italic);
-            context_text.move(RENDERING_WIDTH - text_margin - 5 - context_text.getLocalBounds().width, text_margin);
+            context_text.move(sf::Vector2f(RENDERING_WIDTH - text_margin - 5 - text_width(context_text), text_margin));
 
             target.draw(context_text, states);
         }
@@ -452,44 +599,44 @@ struct graph
         float x_offset = text_margin;
 
         for (auto it = lines_.begin(); it != lines_.end(); ++it) {
-            sf::Text line_text(it->first, get_default_font(), text_size);
-            line_text.setPosition(x_offset, text_margin + text_offset / 2);
-            line_text.setColor(get_sfml_color(it->second.get_color()));
+            auto line_text = make_text(it->first, get_default_font(), text_size);
+            line_text.setPosition(sf::Vector2f(x_offset, text_margin + text_offset / 2));
+            line_text.setFillColor(get_sfml_color(it->second.get_color()));
             target.draw(line_text, states);
-            x_offset += line_text.getLocalBounds().width + text_margin * 2;
+            x_offset += text_width(line_text) + text_margin * 2;
         }
 
         static const auto rect = []() {
             sf::RectangleShape r(sf::Vector2f(RENDERING_WIDTH, RENDERING_HEIGHT - 2));
             r.setFillColor(sf::Color(255, 255, 255, 51));
             r.setOutlineThickness(0.00f);
-            r.move(0, 1);
+            r.move(sf::Vector2f(0, 1));
             return r;
         }();
         target.draw(rect, states);
 
-        states.transform.translate(0, text_offset)
-            .scale(RENDERING_WIDTH,
-                   RENDERING_HEIGHT *
-                       (static_cast<float>(RENDERING_HEIGHT - text_offset) / static_cast<float>(RENDERING_HEIGHT)));
+        states.transform.translate(sf::Vector2f(0, text_offset))
+            .scale(sf::Vector2f(RENDERING_WIDTH,
+                                RENDERING_HEIGHT * (static_cast<float>(RENDERING_HEIGHT - text_offset) /
+                                                    static_cast<float>(RENDERING_HEIGHT))));
 
         static const sf::Color       guide_color(255, 255, 255, 127);
         static const sf::VertexArray middle_guide = []() {
-            sf::VertexArray result(sf::LinesStrip);
-            result.append(sf::Vertex(sf::Vector2f(0.0f, 0.5f), guide_color));
-            result.append(sf::Vertex(sf::Vector2f(1.0f, 0.5f), guide_color));
+            sf::VertexArray result(SF_LINE_STRIP);
+            result.append(make_vertex(sf::Vector2f(0.0f, 0.5f), guide_color));
+            result.append(make_vertex(sf::Vector2f(1.0f, 0.5f), guide_color));
             return result;
         }();
         static const sf::VertexArray bottom_guide = []() {
-            sf::VertexArray result(sf::LinesStrip);
-            result.append(sf::Vertex(sf::Vector2f(0.0f, 0.9f), guide_color));
-            result.append(sf::Vertex(sf::Vector2f(1.0f, 0.9f), guide_color));
+            sf::VertexArray result(SF_LINE_STRIP);
+            result.append(make_vertex(sf::Vector2f(0.0f, 0.9f), guide_color));
+            result.append(make_vertex(sf::Vector2f(1.0f, 0.9f), guide_color));
             return result;
         }();
         static const sf::VertexArray top_guide = []() {
-            sf::VertexArray result(sf::LinesStrip);
-            result.append(sf::Vertex(sf::Vector2f(0.0f, 0.1f), guide_color));
-            result.append(sf::Vertex(sf::Vector2f(1.0f, 0.1f), guide_color));
+            sf::VertexArray result(SF_LINE_STRIP);
+            result.append(make_vertex(sf::Vector2f(0.0f, 0.1f), guide_color));
+            result.append(make_vertex(sf::Vector2f(1.0f, 0.1f), guide_color));
             return result;
         }();
 
@@ -518,7 +665,5 @@ void register_sink()
 void show_graphs(bool value) { context::show(value); }
 
 void shutdown() { context::shutdown(); }
-
-#endif
 
 }}}} // namespace caspar::core::diagnostics::osd

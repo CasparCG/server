@@ -188,7 +188,13 @@ void terminate_handler()
 
 } // namespace caspar
 
+#ifdef __APPLE__
+// On macOS the real main() (macos_main.mm) runs the Cocoa event loop on the main thread,
+// which AppKit requires for windows, and calls this on a secondary thread.
+int caspar_main(int argc, char** argv)
+#else
 int main(int argc, char** argv)
+#endif
 {
     using namespace caspar;
 
@@ -213,7 +219,7 @@ int main(int argc, char** argv)
         boost::filesystem::remove(backtrace);
     }
 
-    int return_code = 0;
+    int return_code = 1; // set to 0 (or 5 = restart) on a clean shutdown
     setup_prerequisites();
 
     setup_global_locale();

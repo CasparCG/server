@@ -49,6 +49,10 @@
 #include <accelerator/d3d/d3d_device.h>
 #endif
 
+#ifdef __APPLE__
+#include "html_mac.h"
+#endif
+
 // Malinfo patch start - Remove once fixed upstream.
 #if defined(__linux__)
 #include <algorithm>
@@ -81,6 +85,9 @@ extern "C" struct mallinfo mallinfo(void)
 namespace caspar::html {
 
 std::unique_ptr<executor> g_cef_executor;
+#ifdef __APPLE__
+bool g_cef_initialized = false;
+#endif
 
 void caspar_log(const CefRefPtr<CefBrowser>&        browser,
                 boost::log::trivial::severity_level level,
@@ -132,6 +139,9 @@ class remove_handler : public CefV8Handler
 class renderer_application
     : public CefApp
     , CefRenderProcessHandler
+#ifdef __APPLE__
+    , CefBrowserProcessHandler
+#endif
 {
     std::vector<CefRefPtr<CefV8Context>> contexts_;
     const bool                           enable_gpu_;
@@ -145,6 +155,13 @@ class renderer_application
     }
 
     CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
+
+#ifdef __APPLE__
+    CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override { return this; }
+
+    // CEF runs on the Cocoa main thread with an external message pump on macOS.
+    void OnScheduleMessagePumpWork(int64_t delay_ms) override { mac::schedule_message_pump_work(delay_ms); }
+#endif
 
     void
     OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
@@ -224,6 +241,10 @@ class renderer_application
         }
 #endif
 
+#ifdef __APPLE__
+        // Don't prompt for access to the macOS keychain ("Chromium Safe Storage").
+        command_line->AppendSwitch("use-mock-keychain");
+#endif
         command_line->AppendSwitch("disable-web-security");
         command_line->AppendSwitch("enable-begin-frame-scheduling");
         command_line->AppendSwitch("disable-renderer-backgrounding");
@@ -257,6 +278,22 @@ class renderer_application
 
 bool intercept_command_line(int argc, char** argv)
 {
+#ifdef __APPLE__
+    // Only CEF sub-processes (started with --type=...) need to be intercepted. The browser
+    // process loads the framework later, in init().
+    bool is_subprocess = false;
+    for (int n = 1; n < argc; ++n) {
+        if (std::string(argv[n]).rfind("--type=", 0) == 0) {
+            is_subprocess = true;
+        }
+    }
+    if (!is_subprocess) {
+        return false;
+    }
+    if (!mac::load_cef_library()) {
+        return false;
+    }
+#endif
 #ifdef _WIN32
     CefMainArgs main_args;
 #else
@@ -284,8 +321,20 @@ void init(const core::module_dependencies& dependencies)
     dependencies.producer_registry->register_producer_factory(L"HTML Producer", html::create_producer);
 
     CefMainArgs main_args;
+#ifdef __APPLE__
+    if (!mac::load_cef_library()) {
+        CASPAR_LOG(warning) << L"[html] Chromium Embedded Framework not found (run CasparCG.app/Contents/MacOS/"
+                               L"casparcg to use HTML templates). HTML producer disabled.";
+        return;
+    }
+    bool result = false;
+    auto initialize = [&](const std::function<bool()>& func) { mac::run_on_main_thread([&] { result = func(); }); };
+#else
     g_cef_executor = std::make_unique<executor>(L"cef");
-    bool result    = g_cef_executor->invoke([&] {
+    auto initialize = [&](const std::function<bool()>& func) { return g_cef_executor->invoke(func); };
+    bool result     = false;
+#endif
+    initialize([&] {
 #ifdef WIN32
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #endif
@@ -306,8 +355,21 @@ void init(const core::module_dependencies& dependencies)
             CefString(&settings.cache_path).FromWString(cache_path);
         }
 
-        return CefInitialize(
+#ifdef __APPLE__
+        settings.external_message_pump = true;
+        const auto helper              = mac::helper_executable_path();
+        if (!helper.empty()) {
+            CefString(&settings.browser_subprocess_path).FromString(helper);
+        }
+        const auto bundle = mac::main_bundle_path();
+        if (!bundle.empty()) {
+            CefString(&settings.main_bundle_path).FromString(bundle);
+        }
+#endif
+
+        result = CefInitialize(
             main_args, settings, CefRefPtr<CefApp>(new renderer_application(gpu.first, gpu.second)), nullptr);
+        return result;
     });
 
     if (!result) {
@@ -321,7 +383,11 @@ void init(const core::module_dependencies& dependencies)
                      << "." << cef_version_info(6) << "." << cef_version_info(7) << "), API version "
                      << cef_api_version() << ". Built against CEF " << CEF_VERSION;
 
+#ifdef __APPLE__
+    g_cef_initialized = true;
+#else
     g_cef_executor->begin_invoke([&] { CefRunMessageLoop(); });
+#endif
     dependencies.cg_registry->register_cg_producer(
         L"html",
         {L".html"},
@@ -334,6 +400,20 @@ void init(const core::module_dependencies& dependencies)
 
 void uninit()
 {
+#ifdef __APPLE__
+    if (!g_cef_initialized)
+        return;
+    g_cef_initialized = false;
+    mac::run_on_main_thread([] {
+        // Let pending browser close/cleanup tasks run before shutting down.
+        for (int n = 0; n < 50; ++n) {
+            CefDoMessageLoopWork();
+        }
+        mac::stop_message_pump();
+        CefShutdown();
+    });
+    return;
+#endif
     if (!g_cef_executor)
         return;
 

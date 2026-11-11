@@ -23,6 +23,12 @@ if (MSVC)
 			shell.rc
 			windows_specific.cpp
 	)
+elseif (APPLE)
+	list(APPEND SOURCES
+			macos_main.mm
+			macos_specific.mm
+	)
+	set_source_files_properties(macos_main.mm macos_specific.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 else ()
 	list(APPEND SOURCES
 			linux_specific.cpp
@@ -81,6 +87,16 @@ if (MSVC)
 		d3d9.lib
 		d3d11.lib
 		dxgi.lib
+	)
+elseif (APPLE)
+	target_link_libraries(casparcg
+		${Boost_LIBRARIES}
+		${FFMPEG_LIBRARIES}
+		ICU::i18n
+		ICU::uc
+		z
+		"-framework CoreFoundation"
+		"-framework Cocoa"
 	)
 else ()
 	target_link_libraries(casparcg
@@ -211,3 +227,26 @@ else ()
         install(FILES casparcg.config DESTINATION "share/${CASPARCG_BINARY_NAME}")
     endif ()
 endif ()
+
+if (APPLE)
+	# Assemble CasparCG.app (required for HTML templates: CEF framework + helper bundles)
+	set(CASPARCG_APP_BUNDLE "${CMAKE_BINARY_DIR}/CasparCG.app")
+	if (ENABLE_HTML)
+		set(CASPARCG_BUNDLE_FRAMEWORK "${CEF_FRAMEWORK_DIR}")
+	else ()
+		set(CASPARCG_BUNDLE_FRAMEWORK "")
+	endif ()
+	# Optional NDI runtime to bundle, e.g. -DCASPARCG_NDI_LIB=/usr/local/lib/libndi.dylib
+	set(CASPARCG_NDI_LIB "" CACHE FILEPATH "libndi.dylib to bundle into CasparCG.app (optional)")
+	add_custom_command(TARGET casparcg POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E env "NDI_LIB=${CASPARCG_NDI_LIB}"
+			"${CMAKE_SOURCE_DIR}/../tools/macos/make_bundle.sh"
+			"$<TARGET_FILE:casparcg>"
+			"${CASPARCG_APP_BUNDLE}"
+			"${CASPARCG_BUNDLE_FRAMEWORK}"
+			"${CONFIG_VERSION_MAJOR}.${CONFIG_VERSION_MINOR}.${CONFIG_VERSION_BUG}"
+		COMMENT "Creating CasparCG.app"
+		VERBATIM
+	)
+endif ()
+

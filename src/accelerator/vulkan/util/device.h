@@ -56,6 +56,10 @@ class device final
     class transfer&                    transfer();
 
     std::shared_ptr<class texture> create_texture(int width, int height, int stride, common::bit_depth depth);
+
+    // Whether textures with this many channels can be sampled / uploaded on this GPU. 3 channel
+    // formats (R8G8B8, R16G16B16) are not supported by e.g. MoltenVK (Metal) and many desktop GPUs.
+    bool supports_stride(int stride, common::bit_depth depth) const;
     std::shared_ptr<class buffer>  create_buffer(int size, bool write);
     array<uint8_t>                 create_array(int size);
 

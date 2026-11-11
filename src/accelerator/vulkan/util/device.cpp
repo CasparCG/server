@@ -80,8 +80,21 @@ inline VKAPI_ATTR VkBool32 VKAPI_CALL default_debug_callback(VkDebugUtilsMessage
                      // driver)
 }
 
+static const vk::Format INTERNAL_FORMAT[][5] = {{vk::Format::eUndefined,
+                                                 vk::Format::eR8Unorm,
+                                                 vk::Format::eR8G8Unorm,
+                                                 vk::Format::eR8G8B8Unorm,
+                                                 vk::Format::eR8G8B8A8Unorm},
+                                                {vk::Format::eUndefined,
+                                                 vk::Format::eR16Unorm,
+                                                 vk::Format::eR16G16Unorm,
+                                                 vk::Format::eR16G16B16Unorm,
+                                                 vk::Format::eR16G16B16A16Unorm}};
+
 struct device::impl : public std::enable_shared_from_this<impl>
 {
+    bool supported_strides_[2][5] = {};
+
     using texture_queue_t = tbb::concurrent_bounded_queue<std::shared_ptr<texture>>;
     using buffer_queue_t  = tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>;
 
@@ -195,6 +208,18 @@ struct device::impl : public std::enable_shared_from_this<impl>
         vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 
         _memoryProperties = _physical_device.getMemoryProperties();
+
+        const auto required = vk::FormatFeatureFlagBits::eSampledImage | vk::FormatFeatureFlagBits::eTransferDst;
+        for (int depth = 0; depth < 2; ++depth) {
+            for (int stride = 1; stride < 5; ++stride) {
+                const auto props = _physical_device.getFormatProperties(INTERNAL_FORMAT[depth][stride]);
+                supported_strides_[depth][stride] = (props.optimalTilingFeatures & required) == required;
+            }
+            if (!supported_strides_[depth][3]) {
+                CASPAR_LOG(info) << L"[Vulkan] " << (depth == 0 ? L"8" : L"16")
+                                 << L" bit RGB textures not supported, uploading as RGBA.";
+            }
+        }
     }
 
     ~impl()
@@ -234,19 +259,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
         CASPAR_VERIFY(stride > 0 && stride < 5);
         CASPAR_VERIFY(width > 0 && height > 0);
 
-        static vk::Format INTERNAL_FORMAT[][5] = {{vk::Format::eUndefined,
-                                                   vk::Format::eR8Unorm,
-                                                   vk::Format::eR8G8Unorm,
-                                                   vk::Format::eR8G8B8Unorm,
-                                                   vk::Format::eR8G8B8A8Unorm},
-                                                  {vk::Format::eUndefined,
-                                                   vk::Format::eR16Unorm,
-                                                   vk::Format::eR16G16Unorm,
-                                                   vk::Format::eR16G16B16Unorm,
-                                                   vk::Format::eR16G16B16A16Unorm}};
-
         auto depth_pool_index = depth == common::bit_depth::bit8 ? 0 : 1;
         auto format           = INTERNAL_FORMAT[depth_pool_index][stride];
+        if (!supported_strides_[depth_pool_index][stride]) {
+            CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Texture format with " + std::to_string(stride) +
+                                                               " channels is not supported by this GPU"));
+        }
 
         auto pool   = &device_pools_[depth_pool_index][stride - 1][(width << 16 & 0xFFFF0000) | (height & 0x0000FFFF)];
         auto extent = vk::Extent3D{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
@@ -443,6 +461,10 @@ class transfer&                    device::transfer() { return *impl_->transfer_
 std::shared_ptr<texture> device::create_texture(int width, int height, int stride, common::bit_depth depth)
 {
     return impl_->create_texture(width, height, stride, depth, true);
+}
+bool device::supports_stride(int stride, common::bit_depth depth) const
+{
+    return stride > 0 && stride < 5 && impl_->supported_strides_[depth == common::bit_depth::bit8 ? 0 : 1][stride];
 }
 std::shared_ptr<buffer>      device::create_buffer(int size, bool write) { return impl_->create_buffer(size, write); }
 array<uint8_t>               device::create_array(int size) { return impl_->create_array(size); }

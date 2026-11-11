@@ -2,40 +2,46 @@ cmake_minimum_required (VERSION 3.28)
 project (accelerator)
 
 set(SOURCES
-	ogl/image/image_kernel.cpp
-	ogl/image/image_mixer.cpp
-	ogl/image/image_shader.cpp
-
-	ogl/util/buffer.cpp
-	ogl/util/context.cpp
-	ogl/util/device.cpp
-	ogl/util/shader.cpp
-	ogl/util/texture.cpp
-	ogl/util/matrix.cpp
-	ogl/util/transforms.cpp
-
 	accelerator.cpp
 )
 
 set(HEADERS
-	ogl/image/image_kernel.h
-	ogl/image/image_mixer.h
-	ogl/image/image_shader.h
-
-	ogl/util/buffer.h
-	ogl/util/context.h
-	ogl/util/device.h
-	ogl/util/shader.h
-	ogl/util/texture.h
-	ogl/util/matrix.h
-	ogl/util/transforms.h
-
-	ogl_image_vertex.h
-	ogl_image_fragment.h
-
 	accelerator.h
 	StdAfx.h
 )
+
+IF(ENABLE_OPENGL)
+	list(APPEND SOURCES
+		ogl/image/image_kernel.cpp
+		ogl/image/image_mixer.cpp
+		ogl/image/image_shader.cpp
+
+		ogl/util/buffer.cpp
+		ogl/util/context.cpp
+		ogl/util/device.cpp
+		ogl/util/shader.cpp
+		ogl/util/texture.cpp
+		ogl/util/matrix.cpp
+		ogl/util/transforms.cpp
+	)
+
+	list(APPEND HEADERS
+		ogl/image/image_kernel.h
+		ogl/image/image_mixer.h
+		ogl/image/image_shader.h
+
+		ogl/util/buffer.h
+		ogl/util/context.h
+		ogl/util/device.h
+		ogl/util/shader.h
+		ogl/util/texture.h
+		ogl/util/matrix.h
+		ogl/util/transforms.h
+
+		ogl_image_vertex.h
+		ogl_image_fragment.h
+	)
+ENDIF()
 
 IF(ENABLE_VULKAN)
 	list(APPEND SOURCES
@@ -122,8 +128,10 @@ IF (ENABLE_VULKAN)
 	bin2c("vulkan/image/fragment_shader.spv" "vulkan_image_fragment.h" "caspar::accelerator::vulkan" "fragment_shader")
 ENDIF()
 
-bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
-bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+IF(ENABLE_OPENGL)
+	bin2c("ogl/image/shader.vert" "ogl_image_vertex.h" "caspar::accelerator::ogl" "vertex_shader")
+	bin2c("ogl/image/shader.frag" "ogl_image_fragment.h" "caspar::accelerator::ogl" "fragment_shader")
+ENDIF()
 
 casparcg_add_library(accelerator SOURCES ${SOURCES} ${HEADERS})
 target_include_directories(accelerator PRIVATE .. ${CMAKE_CURRENT_BINARY_DIR})

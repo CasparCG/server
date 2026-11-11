@@ -1,7 +1,9 @@
 #include "accelerator.h"
 
+#ifdef ENABLE_OPENGL
 #include "ogl/image/image_mixer.h"
 #include "ogl/util/device.h"
+#endif
 
 #ifdef ENABLE_VULKAN
 #include "vulkan/image/image_mixer.h"
@@ -53,11 +55,16 @@ struct accelerator::impl
                 depth);
         }
 #endif
-        return std::make_unique<ogl::image_mixer>(
-            spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
-            channel_id,
-            format_repository_.get_max_video_format_size(),
-            depth);
+#ifdef ENABLE_OPENGL
+        if (backend_ == accelerator_backend::opengl) {
+            return std::make_unique<ogl::image_mixer>(
+                spl::make_shared_ptr(std::dynamic_pointer_cast<ogl::device>(get_device())),
+                channel_id,
+                format_repository_.get_max_video_format_size(),
+                depth);
+        }
+#endif
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unsupported accelerator backend"));
     }
 
     std::shared_ptr<accelerator_device> get_device()
@@ -74,11 +81,15 @@ struct accelerator::impl
             return device_;
         }
 #endif
-
-        if (!device_) {
-            device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
+#ifdef ENABLE_OPENGL
+        if (backend_ == accelerator_backend::opengl) {
+            if (!device_) {
+                device_ = std::dynamic_pointer_cast<accelerator_device>(std::make_shared<ogl::device>());
+            }
+            return device_;
         }
-        return device_;
+#endif
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unsupported accelerator backend"));
     }
 };
 

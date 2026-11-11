@@ -30,6 +30,8 @@
 #include <common/future.h>
 #include <common/log.h>
 
+#include <tbb/parallel_for.h>
+
 #include <cstring>
 
 namespace caspar { namespace accelerator { namespace vulkan {
@@ -47,8 +49,41 @@ transfer::copy_async(const array<const uint8_t>& source, int width, int height, 
 {
     std::shared_ptr<buffer> buf;
 
-    auto tmp = source.storage<std::shared_ptr<buffer>>();
-    if (tmp) {
+    if (stride == 3 && !device_.supports_stride(3, depth)) {
+        // No 3 channel texture format on this GPU (e.g. MoltenVK / Metal): expand RGB to RGBA.
+        // The shaders sample rgb/bgr formats as .rgb / .bgr with alpha 1, so alpha is irrelevant.
+        const auto pixels = static_cast<size_t>(width) * height;
+        if (depth == common::bit_depth::bit8) {
+            buf      = device_.create_buffer(static_cast<int>(pixels * 4), true);
+            auto src = source.data();
+            auto dst = reinterpret_cast<uint8_t*>(buf->data());
+            tbb::parallel_for(0, height, [&](int y) {
+                const uint8_t* s = src + static_cast<size_t>(y) * width * 3;
+                uint8_t*       d = dst + static_cast<size_t>(y) * width * 4;
+                for (int x = 0; x < width; ++x, s += 3, d += 4) {
+                    d[0] = s[0];
+                    d[1] = s[1];
+                    d[2] = s[2];
+                    d[3] = 255;
+                }
+            });
+        } else {
+            buf      = device_.create_buffer(static_cast<int>(pixels * 8), true);
+            auto src = reinterpret_cast<const uint16_t*>(source.data());
+            auto dst = reinterpret_cast<uint16_t*>(buf->data());
+            tbb::parallel_for(0, height, [&](int y) {
+                const uint16_t* s = src + static_cast<size_t>(y) * width * 3;
+                uint16_t*       d = dst + static_cast<size_t>(y) * width * 4;
+                for (int x = 0; x < width; ++x, s += 3, d += 4) {
+                    d[0] = s[0];
+                    d[1] = s[1];
+                    d[2] = s[2];
+                    d[3] = 65535;
+                }
+            });
+        }
+        stride = 4;
+    } else if (auto tmp = source.storage<std::shared_ptr<buffer>>()) {
         buf = *tmp;
     } else {
         buf = device_.create_buffer(static_cast<int>(source.size()), true);

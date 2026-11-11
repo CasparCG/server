@@ -60,6 +60,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/samplefmt.h>
 }
@@ -207,11 +208,27 @@ struct Stream
             sink = create_buffersink(graph.get(), "out", get_supported_pixel_formats(nullptr, codec));
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             // TODO codec->profiles
+            auto channel_layouts = get_supported_channel_layouts(nullptr, codec);
+
+            // Newer FFmpeg AAC encoders don't advertise their channel layouts but reject unsupported ones
+            // (e.g. the channel's default 16 channels, "9.1.6") when opened. Constrain the filter graph to
+            // the layouts AAC can carry, so it downmixes instead of failing.
+            static const AVChannelLayout aac_layouts[] = {AV_CHANNEL_LAYOUT_MONO,
+                                                          AV_CHANNEL_LAYOUT_STEREO,
+                                                          AV_CHANNEL_LAYOUT_SURROUND,
+                                                          AV_CHANNEL_LAYOUT_4POINT0,
+                                                          AV_CHANNEL_LAYOUT_5POINT0_BACK,
+                                                          AV_CHANNEL_LAYOUT_5POINT1_BACK,
+                                                          AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK};
+            if (channel_layouts.empty() && codec->id == AV_CODEC_ID_AAC) {
+                channel_layouts = std::span<const AVChannelLayout>(aac_layouts);
+            }
+
             sink = create_abuffersink(graph.get(),
                                       "out",
                                       get_supported_sample_formats(nullptr, codec),
                                       get_supported_sample_rates(nullptr, codec),
-                                      get_supported_channel_layouts(nullptr, codec));
+                                      channel_layouts);
         } else {
             CASPAR_THROW_EXCEPTION(ffmpeg_error_t()
                                    << boost::errinfo_errno(EINVAL) << msg_info_t("invalid output media type"));
@@ -258,6 +275,13 @@ struct Stream
             enc->sample_aspect_ratio = av_buffersink_get_sample_aspect_ratio(sink);
             enc->time_base           = st->time_base;
             enc->pix_fmt             = static_cast<AVPixelFormat>(av_buffersink_get_format(sink));
+
+            // CasparCG frames are full range RGB. Some encoders (e.g. VideoToolbox) refuse RGB input
+            // with an unspecified range.
+            const auto* pix_desc = av_pix_fmt_desc_get(enc->pix_fmt);
+            if (pix_desc && (pix_desc->flags & AV_PIX_FMT_FLAG_RGB) && enc->color_range == AVCOL_RANGE_UNSPECIFIED) {
+                enc->color_range = AVCOL_RANGE_JPEG;
+            }
         } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
             st->time_base = {1, av_buffersink_get_sample_rate(sink)};
 

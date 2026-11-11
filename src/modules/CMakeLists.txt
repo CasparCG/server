@@ -5,7 +5,10 @@ add_subdirectory(image)
 add_subdirectory(ffmpeg)
 add_subdirectory(oal)
 add_subdirectory(decklink)
-add_subdirectory(screen)
+if (ENABLE_OPENGL OR APPLE)
+	# OpenGL 4.5 consumer, or the native Metal consumer on macOS
+	add_subdirectory(screen)
+endif ()
 add_subdirectory(newtek)
 add_subdirectory(artnet)
 

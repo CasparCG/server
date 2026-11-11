@@ -48,6 +48,8 @@ configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${CMAKE_BINARY_DIR}/generat
 
 if(MSVC)
     include(Bootstrap_Windows)
+elseif(APPLE)
+    include(Bootstrap_macOS)
 else ()
     include(Bootstrap_Linux)
 
@@ -60,6 +62,16 @@ endif ()
 
 IF(ENABLE_VULKAN)
     add_definitions(-DENABLE_VULKAN)
+ENDIF()
+
+if (NOT DEFINED ENABLE_OPENGL)
+    set(ENABLE_OPENGL ON)
+endif()
+IF(ENABLE_OPENGL)
+    add_definitions(-DENABLE_OPENGL)
+ENDIF()
+IF(NOT ENABLE_OPENGL AND NOT ENABLE_VULKAN)
+    message(FATAL_ERROR "At least one of ENABLE_OPENGL / ENABLE_VULKAN must be enabled")
 ENDIF()
 
 include_directories("${CMAKE_BINARY_DIR}/generated")
