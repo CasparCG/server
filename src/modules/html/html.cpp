@@ -242,6 +242,13 @@ class renderer_application
         command_line->AppendSwitch("disable-component-update");
         command_line->AppendSwitchWithValue("change-stack-guard-on-fork", "disable");
 
+        // On Linux, Chromium waits for the desktop keyring (Secret Service over D-Bus) for the key it uses to read and
+        // write cookies. That holds back the first http(s) template until about 25 s after startup, and if the keyring
+        // is locked and shows an unlock prompt, the server never finishes starting. Use the basic password store
+        // instead. Its key is hardcoded, so cookies in the profile are only obfuscated, not protected, which is fine
+        // for the cookies templates set.
+        command_line->AppendSwitchWithValue("password-store", "basic");
+
         if (process_type.empty() && !enable_gpu_) {
             // This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run
             // smoothly
