@@ -177,10 +177,18 @@ struct output::impl
             consumers = consumers_;
         }
 
-        auto do_send = [this, &consumers](core::video_field field, const core::const_frame& frame) {
+        // Consumers added after this frame was mixed may need host data it does not carry.
+        const bool host_bytes = input_frame1.image_data(0).data() != nullptr &&
+                                (!input_frame2 || input_frame2.image_data(0).data() != nullptr);
+
+        auto do_send = [this, &consumers, host_bytes](core::video_field field, const core::const_frame& frame) {
             std::map<int, std::future<bool>> futures;
 
             for (auto it = consumers.begin(); it != consumers.end();) {
+                if (!host_bytes && it->second->needs_host_frame()) {
+                    ++it;
+                    continue;
+                }
                 try {
                     futures.emplace(it->first, it->second->send(field, frame));
                     ++it;
