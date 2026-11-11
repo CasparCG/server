@@ -28,7 +28,7 @@ write_plist() { # <path> <executable> <bundle id> <name> <is helper>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
-    <key>LSUIElement</key><string>1</string>
+$( [ "$5" = 1 ] && echo '    <key>LSUIElement</key><string>1</string>' || echo '    <key>CFBundleIconFile</key><string>AppIcon</string>' )
     <key>NSHighResolutionCapable</key><true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
 $6
@@ -41,6 +41,27 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 cp "$EXE" "$APP/Contents/MacOS/casparcg"
 write_plist "$APP/Contents/Info.plist" casparcg "$BUNDLE_ID" CasparCG
+
+SHELL_DIR="$(dirname "$0")/../../src/shell"
+mkdir -p "$APP/Contents/Resources"
+
+# Default configuration, copied to ~/Library/Application Support/CasparCG when the app is
+# started from Finder without a casparcg.config (see macos_main.mm)
+cp "$SHELL_DIR/casparcg.config" "$APP/Contents/Resources/casparcg.config"
+
+# App icon (from the Windows .ico)
+ICONSET="$(mktemp -d)/AppIcon.iconset"
+mkdir -p "$ICONSET"
+if sips -s format png "$SHELL_DIR/CasparCG.ico" --out "$ICONSET/base.png" >/dev/null 2>&1; then
+    for S in 16 32 128 256; do
+        sips -z $S $S "$ICONSET/base.png" --out "$ICONSET/icon_${S}x${S}.png" >/dev/null
+        S2=$((S * 2))
+        sips -z $S2 $S2 "$ICONSET/base.png" --out "$ICONSET/icon_${S}x${S}@2x.png" >/dev/null
+    done
+    rm "$ICONSET/base.png"
+    iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns" || true
+fi
+rm -rf "$(dirname "$ICONSET")"
 
 # Font used by the diagnostics window (DIAG)
 FONT="$(dirname "$0")/../../src/shell/liberation-fonts/LiberationMono-Regular.ttf"

@@ -219,7 +219,7 @@ int main(int argc, char** argv)
         boost::filesystem::remove(backtrace);
     }
 
-    int return_code = 0;
+    int return_code = 1; // set to 0 (or 5 = restart) on a clean shutdown
     setup_prerequisites();
 
     setup_global_locale();
