@@ -4,10 +4,7 @@ project("modules")
 add_subdirectory(image)
 add_subdirectory(ffmpeg)
 add_subdirectory(oal)
-if (NOT APPLE)
-	# TODO(macos): DeckLink SDK for macOS uses CFStringRef/different interop headers
-	add_subdirectory(decklink)
-endif ()
+add_subdirectory(decklink)
 if (ENABLE_OPENGL OR APPLE)
 	# OpenGL 4.5 consumer, or the native Metal consumer on macOS
 	add_subdirectory(screen)

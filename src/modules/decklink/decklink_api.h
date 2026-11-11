@@ -108,22 +108,60 @@ T* get_raw(const CComPtr<T>& ptr)
 
 #else
 
+#if defined(__APPLE__)
+#include "macos_interop/DeckLinkAPI.h"
+#include "macos_interop/DeckLinkAPIConfiguration.h"
+#include "macos_interop/DeckLinkAPIConfiguration_v10_11.h"
+#include "macos_interop/DeckLinkAPI_v10_11.h"
+#include <CoreFoundation/CoreFoundation.h>
+#include <vector>
+
+// CFPlugInCOM.h only provides IUnknownUUID (a CFUUIDRef); the module compares raw REFIID bytes.
+static const REFIID IID_IUnknown = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                    0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46};
+#else
 #include "linux_interop/DeckLinkAPI.h"
 #include "linux_interop/DeckLinkAPIConfiguration.h"
 #include "linux_interop/DeckLinkAPIConfiguration_v10_11.h"
 #include "linux_interop/DeckLinkAPI_v10_11.h"
+#endif
 #include <cstdlib>
 #include <memory>
 #include <typeinfo>
 
 namespace caspar { namespace decklink {
 
-using String   = const char*;
 using BOOL     = bool;
+#ifndef TRUE
 #define TRUE true
+#endif
+#ifndef FALSE
 #define FALSE false
+#endif
 using UINT32   = uint32_t;
 using LONGLONG = int64_t;
+
+#if defined(__APPLE__)
+using String = CFStringRef;
+
+// Takes ownership of the string (the DeckLink API returns retained CFStrings), like the other overloads.
+static std::wstring to_string(String cf_string)
+{
+    if (cf_string == nullptr)
+        return L"";
+
+    CFIndex           length = CFStringGetLength(cf_string);
+    CFIndex           size   = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8) + 1;
+    std::vector<char> buffer(static_cast<size_t>(size));
+    std::wstring      result;
+    if (CFStringGetCString(cf_string, buffer.data(), size, kCFStringEncodingUTF8))
+        result = u16(std::string(buffer.data()));
+
+    CFRelease(cf_string);
+    return result;
+}
+#else
+using String = const char*;
 
 // Takes ownership of utf16_string, matching the BSTR to_string() overload above, which also frees its input.
 static std::wstring to_string(String utf16_string)
@@ -132,6 +170,7 @@ static std::wstring to_string(String utf16_string)
     free((void*)utf16_string);
     return result;
 }
+#endif
 
 static void com_initialize() {}
 
@@ -244,7 +283,7 @@ REFIID iface_id<IDeckLinkVideoFrameAncillaryPackets>()
 template <typename I, typename T>
 static com_iface_ptr<I> iface_cast(com_ptr<T> ptr, bool optional = false)
 {
-    I* iface;
+    I* iface = nullptr;
     ptr->QueryInterface(iface_id<I>(), reinterpret_cast<void**>(&iface));
 
     return wrap_raw<com_iface_ptr>(iface, true);

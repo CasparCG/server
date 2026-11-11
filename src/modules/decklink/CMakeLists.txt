@@ -34,6 +34,20 @@ if (MSVC)
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
 	)
+elseif (APPLE)
+	# Headers mirror the SDK 12.3 interfaces (same as linux_interop) using macOS conventions
+	# (CFPlugInCOM, CFStringRef). The framework itself comes from Blackmagic Desktop Video
+	# and is loaded at runtime from /Library/Frameworks/DeckLinkAPI.framework.
+	list(APPEND SOURCES
+			macos_interop/DeckLinkAPI.h
+			macos_interop/DeckLinkAPIConfiguration.h
+			macos_interop/DeckLinkAPIDeckControl.h
+			macos_interop/DeckLinkAPIDiscovery.h
+			macos_interop/DeckLinkAPIDispatch.cpp
+			macos_interop/DeckLinkAPIModes.h
+			macos_interop/DeckLinkAPITypes.h
+			macos_interop/DeckLinkAPIVersion.h
+	)
 else()
 	list(APPEND SOURCES
 			linux_interop/DeckLinkAPIConfiguration.h
@@ -78,6 +92,11 @@ source_group(sources\\util util/*)
 if (MSVC)
 	target_link_libraries(decklink PRIVATE
 			ffmpeg
+	)
+elseif (APPLE)
+	target_link_libraries(decklink PRIVATE
+			ffmpeg
+			"-framework CoreFoundation"
 	)
 else()
 	target_link_libraries(decklink PRIVATE
