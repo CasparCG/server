@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <functional>
+#include <future>
 #include <memory>
 #include <set>
 #include <string>
@@ -41,6 +42,25 @@ namespace caspar { namespace IO {
 
 class connection;
 
+namespace {
+
+// Without throwing: the endpoints are gone once the peer disconnects or the socket is closed.
+std::wstring local_port(const tcp::socket& socket)
+{
+    boost::system::error_code ec;
+    auto                      endpoint = socket.local_endpoint(ec);
+    return ec ? L"no-port" : std::to_wstring(endpoint.port());
+}
+
+std::wstring remote_address(const tcp::socket& socket)
+{
+    boost::system::error_code ec;
+    auto                      endpoint = socket.remote_endpoint(ec);
+    return ec ? L"no-address" : u16(endpoint.address().to_string());
+}
+
+} // namespace
+
 using connection_set = std::set<spl::shared_ptr<connection>>;
 
 class connection : public spl::enable_shared_from_this<connection>
@@ -51,6 +71,7 @@ class connection : public spl::enable_shared_from_this<connection>
     const spl::shared_ptr<tcp::socket>       socket_;
     std::shared_ptr<boost::asio::io_context> io_context_;
     const std::wstring                       listen_port_;
+    const std::wstring                       remote_address_;
     const spl::shared_ptr<connection_set>    connection_set_;
     protocol_strategy_factory<char>::ptr     protocol_factory_;
     std::shared_ptr<protocol_strategy<char>> protocol_;
@@ -134,10 +155,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
     std::wstring address() const { return u16(socket_->local_endpoint().address().to_string()); }
 
-    std::wstring ipv4_address() const
-    {
-        return socket_->is_open() ? u16(socket_->remote_endpoint().address().to_string()) : L"no-address";
-    }
+    std::wstring ipv4_address() const { return remote_address_; }
 
     void send(std::string&& data)
     {
@@ -203,7 +221,8 @@ class connection : public spl::enable_shared_from_this<connection>
                const spl::shared_ptr<connection_set>&          connection_set)
         : socket_(socket)
         , io_context_(io_context)
-        , listen_port_(socket_->is_open() ? std::to_wstring(socket_->local_endpoint().port()) : L"no-port")
+        , listen_port_(local_port(*socket_))
+        , remote_address_(remote_address(*socket_))
         , connection_set_(connection_set)
         , protocol_factory_(protocol_factory)
         , is_writing_(false)
@@ -274,6 +293,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 {
     std::shared_ptr<boost::asio::io_context> io_context_;
     tcp::acceptor                            acceptor_;
+    const std::wstring                       port_;
     protocol_strategy_factory<char>::ptr     protocol_factory_;
     spl::shared_ptr<connection_set>          connection_set_;
     std::vector<lifecycle_factory_t>         lifecycle_factories_;
@@ -303,18 +323,29 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 
             return tcp::acceptor(*io_context_, endpoint);
         }())
+        , port_(std::to_wstring(acceptor_.local_endpoint().port()))
         , protocol_factory_(protocol)
     {
     }
 
     void stop()
     {
-        try {
-            acceptor_.cancel();
-            acceptor_.close();
-        } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
+        // The acceptor isn't thread-safe: close it on the thread that runs its handlers.
+        auto close = [this] {
+            boost::system::error_code ec;
+            acceptor_.cancel(ec);
+            acceptor_.close(ec);
+        };
+        if (io_context_->stopped()) {
+            close();
+            return;
         }
+        std::promise<void> closed;
+        boost::asio::dispatch(*io_context_, [&] {
+            close();
+            closed.set_value();
+        });
+        closed.get_future().wait();
     }
 
     ~implementation()
@@ -358,10 +389,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
         start_accept();
     }
 
-    std::wstring print() const
-    {
-        return L"async_event_server[:" + std::to_wstring(acceptor_.local_endpoint().port()) + L"]";
-    }
+    std::wstring print() const { return L"async_event_server[:" + port_ + L"]"; }
 
     void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
     {
