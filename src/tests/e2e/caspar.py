@@ -12,6 +12,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 
 @dataclass
@@ -81,15 +82,16 @@ class Server:
         channels_xml = "".join(
             f"<channel><video-mode>{mode}</video-mode><consumers /></channel>" for mode in channels
         )
+        root = escape(str(folder))  # the output path may contain & or <
         self.config = folder / "casparcg.config"
         self.config.write_text(
             f"""<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <paths>
-    <media-path>{folder}/media/</media-path>
+    <media-path>{root}/media/</media-path>
     <log-path disabled="true" />
-    <data-path>{folder}/data/</data-path>
-    <template-path>{folder}/template/</template-path>
+    <data-path>{root}/data/</data-path>
+    <template-path>{root}/template/</template-path>
   </paths>
   <log-level>debug</log-level>
   <accelerator>{accelerator}</accelerator>
