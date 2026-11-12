@@ -51,8 +51,8 @@ def make_server(output_dir):
     for server in servers:
         try:
             server.check_shutdown()
-        except AssertionError as e:
-            failures.append(str(e))
+        except Exception as e:  # check the other servers too
+            failures.append(str(e) if isinstance(e, AssertionError) else repr(e))
     if failures:
         pytest.fail("\n\n".join(failures), pytrace=False)
 

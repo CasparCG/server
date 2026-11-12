@@ -139,13 +139,16 @@ class Server:
             self.exit_code = self.process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             stacks = self.folder / "stacks.txt"
-            with open(stacks, "w") as out:
-                subprocess.run(
-                    ["gdb", "-q", "-batch", "-p", str(self.process.pid), "-ex", "thread apply all bt"],
-                    stdout=out,
-                    stderr=subprocess.STDOUT,
-                    timeout=120,
-                )
+            try:
+                with open(stacks, "w") as out:
+                    subprocess.run(
+                        ["gdb", "-q", "-batch", "-p", str(self.process.pid), "-ex", "thread apply all bt"],
+                        stdout=out,
+                        stderr=subprocess.STDOUT,
+                        timeout=120,
+                    )
+            except (OSError, subprocess.TimeoutExpired) as e:  # no gdb, or it hung; kill the server anyway
+                stacks = f"none ({e})"
             self.process.kill()
             self.process.wait()
             raise AssertionError(f"the server didn't exit within {timeout} s; thread stacks: {stacks}\n{self.tail()}")
