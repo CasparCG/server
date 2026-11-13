@@ -260,6 +260,29 @@ class renderer_application
             return true;
         }
 
+        // CreateFunction needs an entered context; Exit() runs on every return path
+        struct context_scope
+        {
+            CefRefPtr<CefV8Context> context;
+            bool                    entered;
+
+            explicit context_scope(CefRefPtr<CefV8Context> c)
+                : context(std::move(c))
+                , entered(context->Enter())
+            {
+            }
+            ~context_scope()
+            {
+                if (entered)
+                    context->Exit();
+            }
+        } scope(context);
+
+        if (!scope.entered) {
+            send_invoke_result(frame, id, CefString(), "could not enter the javascript context");
+            return true;
+        }
+
         CefRefPtr<CefV8Value>     value;
         CefRefPtr<CefV8Exception> exception;
         if (!context->Eval(code, frame->GetURL(), 1, value, exception)) {
