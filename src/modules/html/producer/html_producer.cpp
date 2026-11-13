@@ -35,9 +35,11 @@
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
+#include <common/except.h>
 #include <common/future.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
+#include <common/utf.h>
 
 #if defined(__GNUC__) && __GNUC__ == 14
 #pragma GCC diagnostic push
@@ -55,6 +57,11 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
+#include <boost/algorithm/string/replace.hpp>
+
+#include <cstdint>
+#include <limits>
+#include <map>
 #include <mutex>
 
 #include <include/cef_app.h>
@@ -84,6 +91,13 @@ inline std::int_least64_t now()
                std::chrono::high_resolution_clock::now().time_since_epoch())
         .count();
 }
+
+// Script waiting for the page to load; a non-empty invoke_id marks a CG INVOKE whose result is reported back
+struct queued_script
+{
+    std::string  invoke_id;
+    std::wstring javascript;
+};
 
 struct presentation_frame
 {
@@ -136,7 +150,7 @@ class html_client
     core::video_format_desc              format_desc_;
     bool                                 gpu_enabled_;
     bool                                 shared_texture_enable_;
-    tbb::concurrent_queue<std::wstring>  javascript_before_load_;
+    tbb::concurrent_queue<queued_script> javascript_before_load_;
     std::atomic<bool>                    loaded_;
     std::atomic<bool>                    not_found_;
     std::queue<presentation_frame>       frames_;
@@ -153,6 +167,16 @@ class html_client
     std::int_least64_t last_frame_time_;
 
     CefRefPtr<CefBrowser> browser_;
+
+    // CG INVOKE calls waiting for the template to report their result, by request id
+    struct pending_invoke
+    {
+        std::promise<std::wstring> promise;
+        std::wstring               javascript;
+    };
+    std::map<std::string, pending_invoke> pending_invokes_;
+    std::mutex                            pending_invokes_mutex_;
+    std::atomic<std::uint64_t>            invoke_counter_{0};
 
 #ifdef WIN32
     std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
@@ -206,6 +230,7 @@ class html_client
     void close()
     {
         closing_ = true;
+        resolve_pending_invokes();
 
         html::invoke([this] {
             if (browser_ != nullptr) {
@@ -294,14 +319,33 @@ class html_client
         return !frames_.empty() || last_frame_;
     }
 
-    void execute_javascript(const std::wstring& javascript)
+    void execute_javascript(const std::wstring& javascript) { queue_or_run({std::string(), javascript}); }
+
+    // Runs a CG INVOKE call; the future holds the value the template returned, an exception if the call failed,
+    // or an empty string if the browser was closed or nothing came back in time
+    std::future<std::wstring> execute_javascript_with_result(const std::wstring& javascript)
     {
-        if (!loaded_) {
-            javascript_before_load_.push(javascript);
-        } else {
-            execute_queued_javascript();
-            do_execute_javascript(javascript);
+        if (closing_ || not_found_)
+            return make_ready_future(std::wstring());
+
+        const auto id = std::to_string(++invoke_counter_);
+
+        std::future<std::wstring> result;
+        {
+            std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+            auto&                       entry = pending_invokes_[id];
+            entry.javascript                  = javascript;
+            result                            = entry.promise.get_future();
         }
+
+        // Every request expires on its own, so neither CG INVOKE nor CALL ... RETURN can wait longer than the
+        // timeout, even if the template never settles its promise
+        const auto            timeout = invoke_timeout();
+        CefRefPtr<html_client> self(this);
+        html::begin_invoke_after([self, id, timeout] { self->expire_invoke(id, timeout); }, timeout);
+
+        queue_or_run({id, javascript});
+        return result;
     }
 
     bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
@@ -469,6 +513,7 @@ class html_client
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
         browser_ = nullptr;
+        resolve_pending_invokes();
     }
 
     bool DoClose(CefRefPtr<CefBrowser> browser) override
@@ -569,6 +614,10 @@ class html_client
 
             return true;
         }
+        if (name == INVOKE_RESULT_MESSAGE_NAME) {
+            on_invoke_result(message);
+            return true;
+        }
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
@@ -624,12 +673,112 @@ class html_client
         });
     }
 
+    // Resolves all pending invokes with an empty string (the browser is closing)
+    void resolve_pending_invokes()
+    {
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        for (auto& entry : pending_invokes_) {
+            entry.second.promise.set_value(std::wstring());
+        }
+        pending_invokes_.clear();
+    }
+
+    // Resolves a request that got no result in time with an empty string
+    void expire_invoke(const std::string& id, std::chrono::milliseconds timeout)
+    {
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        auto                        it = pending_invokes_.find(id);
+        if (it == pending_invokes_.end())
+            return;
+
+        CASPAR_LOG(warning) << print() << L" " << it->second.javascript << L" did not return within "
+                            << timeout.count() << L" ms";
+        it->second.promise.set_value(std::wstring());
+        pending_invokes_.erase(it);
+    }
+
+    void on_invoke_result(const CefRefPtr<CefProcessMessage>& message)
+    {
+        auto args   = message->GetArgumentList();
+        auto id     = args->GetString(0).ToString();
+        auto result = args->GetString(1).ToWString();
+        auto error  = args->GetString(2).ToWString();
+
+        if (!error.empty()) {
+            CASPAR_LOG(warning) << print() << L" CG INVOKE failed: " << log::replace_nonprintable_copy(error, L'?');
+        }
+
+        // The AMCP reply carries exactly one data line
+        boost::algorithm::replace_all(result, L"\r", L"\\r");
+        boost::algorithm::replace_all(result, L"\n", L"\\n");
+
+        complete_invoke(id, std::move(result), error);
+    }
+
+    // A failed call (exception, rejected promise) fails the CG INVOKE command instead of replying with an empty
+    // value, so the client can tell it from a function that returned nothing
+    void complete_invoke(const std::string& id, std::wstring result, const std::wstring& error)
+    {
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        auto                        it = pending_invokes_.find(id);
+        if (it == pending_invokes_.end())
+            return;
+
+        if (error.empty()) {
+            it->second.promise.set_value(std::move(result));
+        } else {
+            it->second.promise.set_exception(
+                std::make_exception_ptr(expected_user_error() << msg_info(L"CG INVOKE failed: " + error)));
+        }
+        pending_invokes_.erase(it);
+    }
+
+    // Plain scripts and CG INVOKE calls share one queue. Queueing, the loaded_ check, draining and dispatch all run
+    // in one task on the CEF UI thread, serialized with OnLoadEnd(), so scripts run in the order they were requested
+    void queue_or_run(queued_script script)
+    {
+        CefRefPtr<html_client> self(this);
+        html::begin_invoke([self, script] {
+            if (!self->loaded_) {
+                self->javascript_before_load_.push(script);
+            } else {
+                self->execute_queued_javascript();
+                self->run(script);
+            }
+        });
+    }
+
+    void run(const queued_script& script)
+    {
+        if (script.invoke_id.empty()) {
+            do_execute_javascript(script.javascript);
+        } else {
+            do_send_invoke(script.invoke_id, script.javascript);
+        }
+    }
+
+    // The renderer evaluates the call in the page context and reports back with INVOKE_RESULT_MESSAGE_NAME.
+    // Sent to the same frame as ExecuteJavaScript, so it stays ordered with play(), update() etc.
+    void do_send_invoke(const std::string& id, const std::wstring& javascript)
+    {
+        html::begin_invoke([this, id, javascript] {
+            if (browser_ == nullptr) {
+                complete_invoke(id, std::wstring(), std::wstring());
+                return;
+            }
+            auto msg = CefProcessMessage::Create(INVOKE_MESSAGE_NAME);
+            msg->GetArgumentList()->SetString(0, id);
+            msg->GetArgumentList()->SetString(1, javascript);
+            browser_->GetMainFrame()->SendProcessMessage(PID_RENDERER, msg);
+        });
+    }
+
     void execute_queued_javascript()
     {
-        std::wstring javascript;
+        queued_script script;
 
-        while (javascript_before_load_.try_pop(javascript))
-            do_execute_javascript(javascript);
+        while (javascript_before_load_.try_pop(script))
+            run(script);
     }
 
     std::wstring print() const
@@ -722,6 +871,8 @@ class html_producer : public core::frame_producer
 
         if (javascript == L"RELOAD") {
             client_->reload();
+        } else if (params.size() > 1 && params.at(1) == INVOKE_RETURN_PARAM) {
+            return client_->execute_javascript_with_result(javascript);
         } else {
             client_->execute_javascript(javascript);
         }

@@ -37,6 +37,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -129,6 +130,68 @@ class remove_handler : public CefV8Handler
     IMPLEMENT_REFCOUNTING(remove_handler);
 };
 
+// Reports the result of a CG INVOKE to the browser process; an empty error means success
+void send_invoke_result(const CefRefPtr<CefFrame>& frame,
+                        const CefString&           id,
+                        const CefString&           result,
+                        const CefString&           error)
+{
+    auto msg  = CefProcessMessage::Create(INVOKE_RESULT_MESSAGE_NAME);
+    auto args = msg->GetArgumentList();
+    args->SetString(0, id);
+    args->SetString(1, result);
+    args->SetString(2, error);
+    frame->SendProcessMessage(PID_BROWSER, msg);
+}
+
+// Native callback handed to the invoke finishing script, called with (id, result, error)
+class invoke_result_handler : public CefV8Handler
+{
+    CefRefPtr<CefFrame> frame_;
+
+  public:
+    explicit invoke_result_handler(const CefRefPtr<CefFrame>& frame)
+        : frame_(frame)
+    {
+    }
+
+    bool Execute(const CefString&       name,
+                 CefRefPtr<CefV8Value>  object,
+                 const CefV8ValueList&  arguments,
+                 CefRefPtr<CefV8Value>& retval,
+                 CefString&             exception) override
+    {
+        if (!CefCurrentlyOn(TID_RENDERER)) {
+            return false;
+        }
+
+        auto arg = [&](size_t i) {
+            return arguments.size() > i && arguments[i]->IsString() ? arguments[i]->GetStringValue() : CefString();
+        };
+        send_invoke_result(frame_, arg(0), arg(1), arg(2));
+        return true;
+    }
+
+    IMPLEMENT_REFCOUNTING(invoke_result_handler);
+};
+
+// Awaits the value of a CG INVOKE call (it may be a promise) and reports it as a string: strings as they are,
+// other values as JSON, undefined as an empty string. Compiled by the embedder, so it is not subject to the
+// page's Content Security Policy.
+const char* const INVOKE_FINISH_SCRIPT = R"((function (id, value, report) {
+    var fail = function (e) { report(id, '', String(e) || 'CG INVOKE failed'); };
+    Promise.resolve(value).then(function (v) {
+        var result;
+        try {
+            result = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
+        } catch (e) {
+            fail(e);
+            return;
+        }
+        report(id, result === undefined ? '' : result, '');
+    }, fail);
+}))";
+
 class renderer_application
     : public CefApp
     , CefRenderProcessHandler
@@ -174,6 +237,75 @@ class renderer_application
         if (!injected) {
             caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
         }
+    }
+
+    // CG INVOKE: the call is evaluated through the V8 context (like ExecuteJavaScript, and unlike eval() it is
+    // not blocked by a script-src policy), so statement lists work and the completion value is the result
+    bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefRefPtr<CefFrame>          frame,
+                                  CefProcessId                 source_process,
+                                  CefRefPtr<CefProcessMessage> message) override
+    {
+        if (message->GetName().ToString() != INVOKE_MESSAGE_NAME) {
+            return false;
+        }
+
+        auto args = message->GetArgumentList();
+        auto id   = args->GetString(0);
+        auto code = args->GetString(1);
+
+        auto context = frame->GetV8Context();
+        if (!context) {
+            send_invoke_result(frame, id, CefString(), "no javascript context");
+            return true;
+        }
+
+        // CreateFunction needs an entered context; Exit() runs on every return path
+        struct context_scope
+        {
+            CefRefPtr<CefV8Context> context;
+            bool                    entered;
+
+            explicit context_scope(CefRefPtr<CefV8Context> c)
+                : context(std::move(c))
+                , entered(context->Enter())
+            {
+            }
+            ~context_scope()
+            {
+                if (entered)
+                    context->Exit();
+            }
+        } scope(context);
+
+        if (!scope.entered) {
+            send_invoke_result(frame, id, CefString(), "could not enter the javascript context");
+            return true;
+        }
+
+        CefRefPtr<CefV8Value>     value;
+        CefRefPtr<CefV8Exception> exception;
+        if (!context->Eval(code, frame->GetURL(), 1, value, exception)) {
+            send_invoke_result(
+                frame, id, CefString(), exception ? exception->GetMessage() : CefString("evaluation failed"));
+            return true;
+        }
+
+        CefRefPtr<CefV8Value> finish;
+        if (!context->Eval(INVOKE_FINISH_SCRIPT, CefString(), 1, finish, exception) || !finish ||
+            !finish->IsFunction()) {
+            send_invoke_result(frame, id, CefString(), "could not prepare the result");
+            return true;
+        }
+
+        CefV8ValueList finish_args{CefV8Value::CreateString(id),
+                                   value ? value : CefV8Value::CreateUndefined(),
+                                   CefV8Value::CreateFunction("report", new invoke_result_handler(frame))};
+        if (!finish->ExecuteFunctionWithContext(context, nullptr, finish_args)) {
+            send_invoke_result(frame, id, CefString(), "could not read the result");
+        }
+
+        return true;
     }
 
     void OnContextReleased(CefRefPtr<CefBrowser>   browser,
@@ -375,6 +507,13 @@ class cef_task : public CefTask
 
 void invoke(const std::function<void()>& func) { begin_invoke(func).get(); }
 
+std::chrono::milliseconds invoke_timeout()
+{
+    static const auto timeout =
+        std::chrono::milliseconds((std::max)(0, env::properties().get(L"configuration.html.invoke-timeout", 1000)));
+    return timeout;
+}
+
 std::future<void> begin_invoke(const std::function<void()>& func)
 {
     CefRefPtr<cef_task> task = new cef_task(func);
@@ -389,6 +528,15 @@ std::future<void> begin_invoke(const std::function<void()>& func)
         return task->future();
     }
     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
+}
+
+void begin_invoke_after(const std::function<void()>& func, std::chrono::milliseconds delay)
+{
+    CefRefPtr<cef_task> task = new cef_task(func);
+
+    if (!CefPostDelayedTask(TID_UI, task.get(), delay.count())) {
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post delayed task"));
+    }
 }
 
 std::pair<bool, bool> is_gpu_shared_texture_enabled()

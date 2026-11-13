@@ -22,6 +22,10 @@
 
 #include "html_cg_proxy.h"
 
+#include "../util.h"
+
+#include <common/log.h>
+
 #include <future>
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -75,7 +79,15 @@ std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
 
     // Append empty () if no parameter list has been given
     auto javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
-    return producer_->call({javascript}).get();
+
+    // The future holds the value returned by the template; if the call failed, get() throws and the command
+    // is answered with an error. The producer resolves it after invoke_timeout() at the latest (and logs it);
+    // the bounded wait here is only a safeguard so the AMCP queue cannot be blocked.
+    auto result = producer_->call({javascript, INVOKE_RETURN_PARAM});
+    if (result.wait_for(invoke_timeout() + std::chrono::milliseconds(500)) == std::future_status::timeout) {
+        return L"";
+    }
+    return result.get();
 }
 
 }} // namespace caspar::html
