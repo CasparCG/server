@@ -21,14 +21,25 @@
 
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <future>
 #include <string>
 
 namespace caspar::html {
 
-const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
-const std::string LOG_MESSAGE_NAME    = "CasparCGLog";
+const std::string REMOVE_MESSAGE_NAME        = "CasparCGRemove";
+const std::string LOG_MESSAGE_NAME           = "CasparCGLog";
+const std::string INVOKE_RESULT_MESSAGE_NAME = "CasparCGInvokeResult";
+
+// Global function the renderer exposes to the page for reporting the result of a CG INVOKE
+const std::string INVOKE_RESULT_FUNCTION_NAME = "__casparcgInvokeResult";
+
+// Extra parameter of frame_producer::call() asking the html producer to return the javascript result
+const std::wstring INVOKE_RETURN_PARAM = L"RETURN";
+
+// How long CG INVOKE waits for the template to return a value (configuration.html.invoke-timeout)
+std::chrono::milliseconds invoke_timeout();
 
 void              invoke(const std::function<void()>& func);
 std::future<void> begin_invoke(const std::function<void()>& func);

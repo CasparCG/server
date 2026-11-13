@@ -38,6 +38,7 @@
 #include <common/future.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
+#include <common/utf.h>
 
 #if defined(__GNUC__) && __GNUC__ == 14
 #pragma GCC diagnostic push
@@ -55,6 +56,11 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
+#include <boost/algorithm/string/replace.hpp>
+
+#include <cstdint>
+#include <limits>
+#include <map>
 #include <mutex>
 
 #include <include/cef_app.h>
@@ -83,6 +89,75 @@ inline std::int_least64_t now()
     return std::chrono::duration_cast<std::chrono::milliseconds>(
                std::chrono::high_resolution_clock::now().time_since_epoch())
         .count();
+}
+
+// Quotes a string as a javascript string literal
+static std::wstring to_js_string_literal(const std::wstring& str)
+{
+    static const wchar_t* hex = L"0123456789abcdef";
+
+    std::wstring result = L"\"";
+    for (auto c : str) {
+        switch (c) {
+            case L'\\':
+                result += L"\\\\";
+                break;
+            case L'"':
+                result += L"\\\"";
+                break;
+            case L'\n':
+                result += L"\\n";
+                break;
+            case L'\r':
+                result += L"\\r";
+                break;
+            case L'\t':
+                result += L"\\t";
+                break;
+            case 0x2028:
+                result += L"\\u2028";
+                break;
+            case 0x2029:
+                result += L"\\u2029";
+                break;
+            default:
+                if (c < 0x20) {
+                    result += L"\\u00";
+                    result += hex[(c >> 4) & 0xf];
+                    result += hex[c & 0xf];
+                } else {
+                    result += c;
+                }
+        }
+    }
+    return result + L"\"";
+}
+
+// Wraps a CG INVOKE call so its result is reported back through INVOKE_RESULT_FUNCTION_NAME.
+// The call is evaluated (indirect eval, global scope) so statement lists keep working as with a plain
+// ExecuteJavaScript. A returned promise is awaited. Strings are returned as they are, other values as JSON,
+// undefined as an empty string.
+static std::wstring make_invoke_script(const std::string& id, const std::wstring& javascript)
+{
+    const auto report = u16(INVOKE_RESULT_FUNCTION_NAME);
+    const auto js_id  = to_js_string_literal(u16(id));
+
+    return L"(function () {"
+           L"  var report = function (result, error) { window." +
+           report + L"(" + js_id +
+           L", result, error); };"
+           L"  try {"
+           L"    Promise.resolve((0, eval)(" +
+           to_js_string_literal(javascript) +
+           L")).then(function (value) {"
+           L"      var result;"
+           L"      try {"
+           L"        result = value === undefined ? '' : typeof value === 'string' ? value : JSON.stringify(value);"
+           L"      } catch (e) { report('', String(e)); return; }"
+           L"      report(result === undefined ? '' : result, '');"
+           L"    }, function (e) { report('', String(e)); });"
+           L"  } catch (e) { report('', String(e)); }"
+           L"})();";
 }
 
 struct presentation_frame
@@ -154,6 +229,16 @@ class html_client
 
     CefRefPtr<CefBrowser> browser_;
 
+    // CG INVOKE calls waiting for the template to report their result, by request id
+    struct pending_invoke
+    {
+        std::promise<std::wstring> promise;
+        std::int_least64_t         created;
+    };
+    std::map<std::string, pending_invoke> pending_invokes_;
+    std::mutex                            pending_invokes_mutex_;
+    std::atomic<std::uint64_t>            invoke_counter_{0};
+
 #ifdef WIN32
     std::shared_ptr<accelerator::d3d::d3d_device> const d3d_device_;
     std::shared_ptr<accelerator::d3d::d3d_texture2d>    d3d_shared_buffer_;
@@ -206,6 +291,7 @@ class html_client
     void close()
     {
         closing_ = true;
+        resolve_pending_invokes();
 
         html::invoke([this] {
             if (browser_ != nullptr) {
@@ -302,6 +388,31 @@ class html_client
             execute_queued_javascript();
             do_execute_javascript(javascript);
         }
+    }
+
+    // Runs a CG INVOKE call; the future is resolved with the value the template returned,
+    // or with an empty string if it threw, the browser was closed or nothing came back in time
+    std::future<std::wstring> execute_javascript_with_result(const std::wstring& javascript)
+    {
+        if (closing_ || not_found_)
+            return make_ready_future(std::wstring());
+
+        const auto id = std::to_string(++invoke_counter_);
+
+        std::future<std::wstring> result;
+        {
+            std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+            // A template that never reports back must not leak entries; anything older than twice
+            // the timeout has already been given up by the caller
+            prune_pending_invokes(now() - 2 * invoke_timeout().count());
+
+            auto& entry   = pending_invokes_[id];
+            entry.created = now();
+            result        = entry.promise.get_future();
+        }
+
+        execute_javascript(make_invoke_script(id, javascript));
+        return result;
     }
 
     bool OnBeforePopup(CefRefPtr<CefBrowser>          browser,
@@ -469,6 +580,7 @@ class html_client
         CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
         browser_ = nullptr;
+        resolve_pending_invokes();
     }
 
     bool DoClose(CefRefPtr<CefBrowser> browser) override
@@ -569,6 +681,10 @@ class html_client
 
             return true;
         }
+        if (name == INVOKE_RESULT_MESSAGE_NAME) {
+            on_invoke_result(message);
+            return true;
+        }
         if (name == LOG_MESSAGE_NAME) {
             auto args     = message->GetArgumentList();
             auto severity = static_cast<boost::log::trivial::severity_level>(args->GetInt(0));
@@ -622,6 +738,49 @@ class html_client
                 browser_->GetMainFrame()->ExecuteJavaScript(
                     u8(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
         });
+    }
+
+    // Resolves pending invokes created before the given time with an empty string; the caller holds
+    // pending_invokes_mutex_
+    void prune_pending_invokes(std::int_least64_t created_before)
+    {
+        for (auto it = pending_invokes_.begin(); it != pending_invokes_.end();) {
+            if (it->second.created < created_before) {
+                it->second.promise.set_value(std::wstring());
+                it = pending_invokes_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    void resolve_pending_invokes()
+    {
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        prune_pending_invokes((std::numeric_limits<std::int_least64_t>::max)());
+    }
+
+    void on_invoke_result(const CefRefPtr<CefProcessMessage>& message)
+    {
+        auto args   = message->GetArgumentList();
+        auto id     = args->GetString(0).ToString();
+        auto result = args->GetString(1).ToWString();
+        auto error  = args->GetString(2).ToWString();
+
+        if (!error.empty()) {
+            CASPAR_LOG(warning) << print() << L" CG INVOKE failed: " << log::replace_nonprintable_copy(error, L'?');
+        }
+
+        // The AMCP reply carries exactly one data line
+        boost::algorithm::replace_all(result, L"\r", L"\\r");
+        boost::algorithm::replace_all(result, L"\n", L"\\n");
+
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        auto                        it = pending_invokes_.find(id);
+        if (it != pending_invokes_.end()) {
+            it->second.promise.set_value(std::move(result));
+            pending_invokes_.erase(it);
+        }
     }
 
     void execute_queued_javascript()
@@ -722,6 +881,8 @@ class html_producer : public core::frame_producer
 
         if (javascript == L"RELOAD") {
             client_->reload();
+        } else if (params.size() > 1 && params.at(1) == INVOKE_RETURN_PARAM) {
+            return client_->execute_javascript_with_result(javascript);
         } else {
             client_->execute_javascript(javascript);
         }

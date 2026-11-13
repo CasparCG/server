@@ -37,6 +37,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -129,6 +130,51 @@ class remove_handler : public CefV8Handler
     IMPLEMENT_REFCOUNTING(remove_handler);
 };
 
+// Called by the wrapper script of a CG INVOKE with (id, result, error), forwards the result to the browser process
+class invoke_result_handler : public CefV8Handler
+{
+    CefRefPtr<CefBrowser> browser_;
+
+  public:
+    explicit invoke_result_handler(const CefRefPtr<CefBrowser>& browser)
+        : browser_(browser)
+    {
+    }
+
+    bool Execute(const CefString&       name,
+                 CefRefPtr<CefV8Value>  object,
+                 const CefV8ValueList&  arguments,
+                 CefRefPtr<CefV8Value>& retval,
+                 CefString&             exception) override
+    {
+        if (!CefCurrentlyOn(TID_RENDERER)) {
+            return false;
+        }
+
+        if (arguments.size() < 2 || !arguments[0]->IsString() || !arguments[1]->IsString()) {
+            exception = "expected (id, result[, error]) string arguments";
+            return true;
+        }
+
+        auto msg  = CefProcessMessage::Create(INVOKE_RESULT_MESSAGE_NAME);
+        auto args = msg->GetArgumentList();
+        args->SetString(0, arguments[0]->GetStringValue());
+        args->SetString(1, arguments[1]->GetStringValue());
+        args->SetString(2,
+                        arguments.size() > 2 && arguments[2]->IsString() ? arguments[2]->GetStringValue()
+                                                                         : CefString());
+
+        CefRefPtr<CefFrame> mainFrame = browser_->GetMainFrame();
+        if (mainFrame) {
+            mainFrame->SendProcessMessage(PID_BROWSER, msg);
+        }
+
+        return true;
+    }
+
+    IMPLEMENT_REFCOUNTING(invoke_result_handler);
+};
+
 class renderer_application
     : public CefApp
     , CefRenderProcessHandler
@@ -160,6 +206,10 @@ class renderer_application
 
         window->SetValue(
             "remove", CefV8Value::CreateFunction("remove", new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
+
+        window->SetValue(INVOKE_RESULT_FUNCTION_NAME,
+                         CefV8Value::CreateFunction(INVOKE_RESULT_FUNCTION_NAME, new invoke_result_handler(browser)),
+                         V8_PROPERTY_ATTRIBUTE_NONE);
 
         CefRefPtr<CefV8Value>     ret;
         CefRefPtr<CefV8Exception> exception;
@@ -374,6 +424,13 @@ class cef_task : public CefTask
 };
 
 void invoke(const std::function<void()>& func) { begin_invoke(func).get(); }
+
+std::chrono::milliseconds invoke_timeout()
+{
+    static const auto timeout =
+        std::chrono::milliseconds((std::max)(0, env::properties().get(L"configuration.html.invoke-timeout", 1000)));
+    return timeout;
+}
 
 std::future<void> begin_invoke(const std::function<void()>& func)
 {
