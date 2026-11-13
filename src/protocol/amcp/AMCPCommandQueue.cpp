@@ -52,20 +52,24 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
 
             auto res = cmd->Execute(channels).share();
             return std::async(std::launch::async, [cmd, res, reply_without_req_id, timer, name]() -> bool {
-                // A deferred result can fail too (e.g. CALL on a producer); the client must still get a reply
+                // A deferred result can fail too (e.g. CALL on a producer); the client must still get a reply,
+                // and a batch must count the command as failed, as with a synchronous failure
                 std::wstring reply;
+                bool         succeeded = true;
                 try {
                     reply = res.get();
                 } catch (expected_user_error&) {
-                    reply = L"403 " + name + L" FAILED\r\n";
+                    reply     = L"403 " + name + L" FAILED\r\n";
+                    succeeded = false;
                 } catch (...) {
                     CASPAR_LOG_CURRENT_EXCEPTION();
-                    reply = L"501 " + name + L" FAILED\r\n";
+                    reply     = L"501 " + name + L" FAILED\r\n";
+                    succeeded = false;
                 }
                 cmd->SendReply(reply, reply_without_req_id);
 
                 CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << name;
-                return true;
+                return succeeded;
             });
 
         } catch (file_not_found&) {
