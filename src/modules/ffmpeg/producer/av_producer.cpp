@@ -826,6 +826,16 @@ struct AVProducer::Impl
                 }
             }
 
+            if (input_.reopened()) {
+                // The input was reopened: its streams are new, so are the decoders and filters. The
+                // decoders refer to the old streams, so they go before the input switches over.
+                CASPAR_LOG(info) << print() << " input reopened, restarting decoders";
+                decoders_.clear();
+                input_.use_reopened();
+                reset(input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0);
+                continue;
+            }
+
             {
                 // TODO (perf) seek as soon as input is past duration or eof.
 
