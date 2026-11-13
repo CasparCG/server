@@ -733,18 +733,19 @@ class html_client
         pending_invokes_.erase(it);
     }
 
-    // Plain scripts and CG INVOKE calls share one queue, so they keep their order before and after the page loads
+    // Plain scripts and CG INVOKE calls share one queue. Queueing, the loaded_ check, draining and dispatch all run
+    // in one task on the CEF UI thread, serialized with OnLoadEnd(), so scripts run in the order they were requested
     void queue_or_run(queued_script script)
     {
-        if (!loaded_) {
-            javascript_before_load_.push(std::move(script));
-            // The page may have finished loading meanwhile; do not leave the script behind
-            if (loaded_)
-                execute_queued_javascript();
-        } else {
-            execute_queued_javascript();
-            run(script);
-        }
+        CefRefPtr<html_client> self(this);
+        html::begin_invoke([self, script] {
+            if (!self->loaded_) {
+                self->javascript_before_load_.push(script);
+            } else {
+                self->execute_queued_javascript();
+                self->run(script);
+            }
+        });
     }
 
     void run(const queued_script& script)
