@@ -81,12 +81,10 @@ std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
     auto javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
 
     // The future holds the value returned by the template; if the call failed, get() throws and the command
-    // is answered with an error. Waiting is bounded so a template that never returns cannot block the AMCP queue.
-    auto result  = producer_->call({javascript, INVOKE_RETURN_PARAM});
-    auto timeout = invoke_timeout();
-    if (result.wait_for(timeout) == std::future_status::timeout) {
-        CASPAR_LOG(warning) << L"[html_cg_proxy] " << javascript << L" did not return within " << timeout.count()
-                            << L" ms";
+    // is answered with an error. The producer resolves it after invoke_timeout() at the latest (and logs it);
+    // the bounded wait here is only a safeguard so the AMCP queue cannot be blocked.
+    auto result = producer_->call({javascript, INVOKE_RETURN_PARAM});
+    if (result.wait_for(invoke_timeout() + std::chrono::milliseconds(500)) == std::future_status::timeout) {
         return L"";
     }
     return result.get();

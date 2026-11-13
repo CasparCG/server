@@ -172,7 +172,7 @@ class html_client
     struct pending_invoke
     {
         std::promise<std::wstring> promise;
-        std::int_least64_t         created;
+        std::wstring               javascript;
     };
     std::map<std::string, pending_invoke> pending_invokes_;
     std::mutex                            pending_invokes_mutex_;
@@ -333,14 +333,16 @@ class html_client
         std::future<std::wstring> result;
         {
             std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
-            // A template that never reports back must not leak entries; anything older than twice
-            // the timeout has already been given up by the caller
-            prune_pending_invokes(now() - 2 * invoke_timeout().count());
-
-            auto& entry   = pending_invokes_[id];
-            entry.created = now();
-            result        = entry.promise.get_future();
+            auto&                       entry = pending_invokes_[id];
+            entry.javascript                  = javascript;
+            result                            = entry.promise.get_future();
         }
+
+        // Every request expires on its own, so neither CG INVOKE nor CALL ... RETURN can wait longer than the
+        // timeout, even if the template never settles its promise
+        const auto            timeout = invoke_timeout();
+        CefRefPtr<html_client> self(this);
+        html::begin_invoke_after([self, id, timeout] { self->expire_invoke(id, timeout); }, timeout);
 
         queue_or_run({id, javascript});
         return result;
@@ -671,24 +673,28 @@ class html_client
         });
     }
 
-    // Resolves pending invokes created before the given time with an empty string; the caller holds
-    // pending_invokes_mutex_
-    void prune_pending_invokes(std::int_least64_t created_before)
-    {
-        for (auto it = pending_invokes_.begin(); it != pending_invokes_.end();) {
-            if (it->second.created < created_before) {
-                it->second.promise.set_value(std::wstring());
-                it = pending_invokes_.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }
-
+    // Resolves all pending invokes with an empty string (the browser is closing)
     void resolve_pending_invokes()
     {
         std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
-        prune_pending_invokes((std::numeric_limits<std::int_least64_t>::max)());
+        for (auto& entry : pending_invokes_) {
+            entry.second.promise.set_value(std::wstring());
+        }
+        pending_invokes_.clear();
+    }
+
+    // Resolves a request that got no result in time with an empty string
+    void expire_invoke(const std::string& id, std::chrono::milliseconds timeout)
+    {
+        std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+        auto                        it = pending_invokes_.find(id);
+        if (it == pending_invokes_.end())
+            return;
+
+        CASPAR_LOG(warning) << print() << L" " << it->second.javascript << L" did not return within "
+                            << timeout.count() << L" ms";
+        it->second.promise.set_value(std::wstring());
+        pending_invokes_.erase(it);
     }
 
     void on_invoke_result(const CefRefPtr<CefProcessMessage>& message)

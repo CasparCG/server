@@ -41,6 +41,7 @@ std::chrono::milliseconds invoke_timeout();
 
 void              invoke(const std::function<void()>& func);
 std::future<void> begin_invoke(const std::function<void()>& func);
+void              begin_invoke_after(const std::function<void()>& func, std::chrono::milliseconds delay);
 
 std::pair<bool, bool> is_gpu_shared_texture_enabled();
 

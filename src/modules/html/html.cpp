@@ -507,6 +507,15 @@ std::future<void> begin_invoke(const std::function<void()>& func)
     CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post task"));
 }
 
+void begin_invoke_after(const std::function<void()>& func, std::chrono::milliseconds delay)
+{
+    CefRefPtr<cef_task> task = new cef_task(func);
+
+    if (!CefPostDelayedTask(TID_UI, task.get(), delay.count())) {
+        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("[cef_executor] Could not post delayed task"));
+    }
+}
+
 std::pair<bool, bool> is_gpu_shared_texture_enabled()
 {
     const bool enable_gpu            = env::properties().get(L"configuration.html.enable-gpu", false);
