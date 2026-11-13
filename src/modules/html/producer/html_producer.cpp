@@ -35,6 +35,7 @@
 #include <common/assert.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
+#include <common/except.h>
 #include <common/future.h>
 #include <common/os/filesystem.h>
 #include <common/timer.h>
@@ -91,74 +92,12 @@ inline std::int_least64_t now()
         .count();
 }
 
-// Quotes a string as a javascript string literal
-static std::wstring to_js_string_literal(const std::wstring& str)
+// Script waiting for the page to load; a non-empty invoke_id marks a CG INVOKE whose result is reported back
+struct queued_script
 {
-    static const wchar_t* hex = L"0123456789abcdef";
-
-    std::wstring result = L"\"";
-    for (auto c : str) {
-        switch (c) {
-            case L'\\':
-                result += L"\\\\";
-                break;
-            case L'"':
-                result += L"\\\"";
-                break;
-            case L'\n':
-                result += L"\\n";
-                break;
-            case L'\r':
-                result += L"\\r";
-                break;
-            case L'\t':
-                result += L"\\t";
-                break;
-            case 0x2028:
-                result += L"\\u2028";
-                break;
-            case 0x2029:
-                result += L"\\u2029";
-                break;
-            default:
-                if (c < 0x20) {
-                    result += L"\\u00";
-                    result += hex[(c >> 4) & 0xf];
-                    result += hex[c & 0xf];
-                } else {
-                    result += c;
-                }
-        }
-    }
-    return result + L"\"";
-}
-
-// Wraps a CG INVOKE call so its result is reported back through INVOKE_RESULT_FUNCTION_NAME.
-// The call is evaluated (indirect eval, global scope) so statement lists keep working as with a plain
-// ExecuteJavaScript. A returned promise is awaited. Strings are returned as they are, other values as JSON,
-// undefined as an empty string.
-static std::wstring make_invoke_script(const std::string& id, const std::wstring& javascript)
-{
-    const auto report = u16(INVOKE_RESULT_FUNCTION_NAME);
-    const auto js_id  = to_js_string_literal(u16(id));
-
-    return L"(function () {"
-           L"  var report = function (result, error) { window." +
-           report + L"(" + js_id +
-           L", result, error); };"
-           L"  try {"
-           L"    Promise.resolve((0, eval)(" +
-           to_js_string_literal(javascript) +
-           L")).then(function (value) {"
-           L"      var result;"
-           L"      try {"
-           L"        result = value === undefined ? '' : typeof value === 'string' ? value : JSON.stringify(value);"
-           L"      } catch (e) { report('', String(e)); return; }"
-           L"      report(result === undefined ? '' : result, '');"
-           L"    }, function (e) { report('', String(e)); });"
-           L"  } catch (e) { report('', String(e)); }"
-           L"})();";
-}
+    std::string  invoke_id;
+    std::wstring javascript;
+};
 
 struct presentation_frame
 {
@@ -211,7 +150,7 @@ class html_client
     core::video_format_desc              format_desc_;
     bool                                 gpu_enabled_;
     bool                                 shared_texture_enable_;
-    tbb::concurrent_queue<std::wstring>  javascript_before_load_;
+    tbb::concurrent_queue<queued_script> javascript_before_load_;
     std::atomic<bool>                    loaded_;
     std::atomic<bool>                    not_found_;
     std::queue<presentation_frame>       frames_;
@@ -380,18 +319,10 @@ class html_client
         return !frames_.empty() || last_frame_;
     }
 
-    void execute_javascript(const std::wstring& javascript)
-    {
-        if (!loaded_) {
-            javascript_before_load_.push(javascript);
-        } else {
-            execute_queued_javascript();
-            do_execute_javascript(javascript);
-        }
-    }
+    void execute_javascript(const std::wstring& javascript) { queue_or_run({std::string(), javascript}); }
 
-    // Runs a CG INVOKE call; the future is resolved with the value the template returned,
-    // or with an empty string if it threw, the browser was closed or nothing came back in time
+    // Runs a CG INVOKE call; the future holds the value the template returned, an exception if the call failed,
+    // or an empty string if the browser was closed or nothing came back in time
     std::future<std::wstring> execute_javascript_with_result(const std::wstring& javascript)
     {
         if (closing_ || not_found_)
@@ -411,7 +342,7 @@ class html_client
             result        = entry.promise.get_future();
         }
 
-        execute_javascript(make_invoke_script(id, javascript));
+        queue_or_run({id, javascript});
         return result;
     }
 
@@ -775,20 +706,72 @@ class html_client
         boost::algorithm::replace_all(result, L"\r", L"\\r");
         boost::algorithm::replace_all(result, L"\n", L"\\n");
 
+        complete_invoke(id, std::move(result), error);
+    }
+
+    // A failed call (exception, rejected promise) fails the CG INVOKE command instead of replying with an empty
+    // value, so the client can tell it from a function that returned nothing
+    void complete_invoke(const std::string& id, std::wstring result, const std::wstring& error)
+    {
         std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
         auto                        it = pending_invokes_.find(id);
-        if (it != pending_invokes_.end()) {
+        if (it == pending_invokes_.end())
+            return;
+
+        if (error.empty()) {
             it->second.promise.set_value(std::move(result));
-            pending_invokes_.erase(it);
+        } else {
+            it->second.promise.set_exception(
+                std::make_exception_ptr(expected_user_error() << msg_info(L"CG INVOKE failed: " + error)));
         }
+        pending_invokes_.erase(it);
+    }
+
+    // Plain scripts and CG INVOKE calls share one queue, so they keep their order before and after the page loads
+    void queue_or_run(queued_script script)
+    {
+        if (!loaded_) {
+            javascript_before_load_.push(std::move(script));
+            // The page may have finished loading meanwhile; do not leave the script behind
+            if (loaded_)
+                execute_queued_javascript();
+        } else {
+            execute_queued_javascript();
+            run(script);
+        }
+    }
+
+    void run(const queued_script& script)
+    {
+        if (script.invoke_id.empty()) {
+            do_execute_javascript(script.javascript);
+        } else {
+            do_send_invoke(script.invoke_id, script.javascript);
+        }
+    }
+
+    // The renderer evaluates the call in the page context and reports back with INVOKE_RESULT_MESSAGE_NAME.
+    // Sent to the same frame as ExecuteJavaScript, so it stays ordered with play(), update() etc.
+    void do_send_invoke(const std::string& id, const std::wstring& javascript)
+    {
+        html::begin_invoke([this, id, javascript] {
+            if (browser_ == nullptr) {
+                complete_invoke(id, std::wstring(), std::wstring());
+                return;
+            }
+            auto msg = CefProcessMessage::Create(INVOKE_MESSAGE_NAME);
+            msg->GetArgumentList()->SetString(0, id);
+            msg->GetArgumentList()->SetString(1, javascript);
+            browser_->GetMainFrame()->SendProcessMessage(PID_RENDERER, msg);
+        });
     }
 
     void execute_queued_javascript()
     {
-        std::wstring javascript;
+        queued_script script;
 
-        while (javascript_before_load_.try_pop(javascript))
-            do_execute_javascript(javascript);
+        while (javascript_before_load_.try_pop(script))
+            run(script);
     }
 
     std::wstring print() const

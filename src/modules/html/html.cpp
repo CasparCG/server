@@ -130,14 +130,28 @@ class remove_handler : public CefV8Handler
     IMPLEMENT_REFCOUNTING(remove_handler);
 };
 
-// Called by the wrapper script of a CG INVOKE with (id, result, error), forwards the result to the browser process
+// Reports the result of a CG INVOKE to the browser process; an empty error means success
+void send_invoke_result(const CefRefPtr<CefFrame>& frame,
+                        const CefString&           id,
+                        const CefString&           result,
+                        const CefString&           error)
+{
+    auto msg  = CefProcessMessage::Create(INVOKE_RESULT_MESSAGE_NAME);
+    auto args = msg->GetArgumentList();
+    args->SetString(0, id);
+    args->SetString(1, result);
+    args->SetString(2, error);
+    frame->SendProcessMessage(PID_BROWSER, msg);
+}
+
+// Native callback handed to the invoke finishing script, called with (id, result, error)
 class invoke_result_handler : public CefV8Handler
 {
-    CefRefPtr<CefBrowser> browser_;
+    CefRefPtr<CefFrame> frame_;
 
   public:
-    explicit invoke_result_handler(const CefRefPtr<CefBrowser>& browser)
-        : browser_(browser)
+    explicit invoke_result_handler(const CefRefPtr<CefFrame>& frame)
+        : frame_(frame)
     {
     }
 
@@ -151,29 +165,32 @@ class invoke_result_handler : public CefV8Handler
             return false;
         }
 
-        if (arguments.size() < 2 || !arguments[0]->IsString() || !arguments[1]->IsString()) {
-            exception = "expected (id, result[, error]) string arguments";
-            return true;
-        }
-
-        auto msg  = CefProcessMessage::Create(INVOKE_RESULT_MESSAGE_NAME);
-        auto args = msg->GetArgumentList();
-        args->SetString(0, arguments[0]->GetStringValue());
-        args->SetString(1, arguments[1]->GetStringValue());
-        args->SetString(2,
-                        arguments.size() > 2 && arguments[2]->IsString() ? arguments[2]->GetStringValue()
-                                                                         : CefString());
-
-        CefRefPtr<CefFrame> mainFrame = browser_->GetMainFrame();
-        if (mainFrame) {
-            mainFrame->SendProcessMessage(PID_BROWSER, msg);
-        }
-
+        auto arg = [&](size_t i) {
+            return arguments.size() > i && arguments[i]->IsString() ? arguments[i]->GetStringValue() : CefString();
+        };
+        send_invoke_result(frame_, arg(0), arg(1), arg(2));
         return true;
     }
 
     IMPLEMENT_REFCOUNTING(invoke_result_handler);
 };
+
+// Awaits the value of a CG INVOKE call (it may be a promise) and reports it as a string: strings as they are,
+// other values as JSON, undefined as an empty string. Compiled by the embedder, so it is not subject to the
+// page's Content Security Policy.
+const char* const INVOKE_FINISH_SCRIPT = R"((function (id, value, report) {
+    var fail = function (e) { report(id, '', String(e) || 'CG INVOKE failed'); };
+    Promise.resolve(value).then(function (v) {
+        var result;
+        try {
+            result = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
+        } catch (e) {
+            fail(e);
+            return;
+        }
+        report(id, result === undefined ? '' : result, '');
+    }, fail);
+}))";
 
 class renderer_application
     : public CefApp
@@ -207,10 +224,6 @@ class renderer_application
         window->SetValue(
             "remove", CefV8Value::CreateFunction("remove", new remove_handler(browser)), V8_PROPERTY_ATTRIBUTE_NONE);
 
-        window->SetValue(INVOKE_RESULT_FUNCTION_NAME,
-                         CefV8Value::CreateFunction(INVOKE_RESULT_FUNCTION_NAME, new invoke_result_handler(browser)),
-                         V8_PROPERTY_ATTRIBUTE_NONE);
-
         CefRefPtr<CefV8Value>     ret;
         CefRefPtr<CefV8Exception> exception;
         bool                      injected = context->Eval(R"(
@@ -224,6 +237,52 @@ class renderer_application
         if (!injected) {
             caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
         }
+    }
+
+    // CG INVOKE: the call is evaluated through the V8 context (like ExecuteJavaScript, and unlike eval() it is
+    // not blocked by a script-src policy), so statement lists work and the completion value is the result
+    bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
+                                  CefRefPtr<CefFrame>          frame,
+                                  CefProcessId                 source_process,
+                                  CefRefPtr<CefProcessMessage> message) override
+    {
+        if (message->GetName().ToString() != INVOKE_MESSAGE_NAME) {
+            return false;
+        }
+
+        auto args = message->GetArgumentList();
+        auto id   = args->GetString(0);
+        auto code = args->GetString(1);
+
+        auto context = frame->GetV8Context();
+        if (!context) {
+            send_invoke_result(frame, id, CefString(), "no javascript context");
+            return true;
+        }
+
+        CefRefPtr<CefV8Value>     value;
+        CefRefPtr<CefV8Exception> exception;
+        if (!context->Eval(code, frame->GetURL(), 1, value, exception)) {
+            send_invoke_result(
+                frame, id, CefString(), exception ? exception->GetMessage() : CefString("evaluation failed"));
+            return true;
+        }
+
+        CefRefPtr<CefV8Value> finish;
+        if (!context->Eval(INVOKE_FINISH_SCRIPT, CefString(), 1, finish, exception) || !finish ||
+            !finish->IsFunction()) {
+            send_invoke_result(frame, id, CefString(), "could not prepare the result");
+            return true;
+        }
+
+        CefV8ValueList finish_args{CefV8Value::CreateString(id),
+                                   value ? value : CefV8Value::CreateUndefined(),
+                                   CefV8Value::CreateFunction("report", new invoke_result_handler(frame))};
+        if (!finish->ExecuteFunctionWithContext(context, nullptr, finish_args)) {
+            send_invoke_result(frame, id, CefString(), "could not read the result");
+        }
+
+        return true;
     }
 
     void OnContextReleased(CefRefPtr<CefBrowser>   browser,

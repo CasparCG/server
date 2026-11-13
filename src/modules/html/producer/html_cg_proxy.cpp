@@ -80,8 +80,8 @@ std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
     // Append empty () if no parameter list has been given
     auto javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
 
-    // The producer resolves the future with the value returned by the template (or an empty string).
-    // Waiting is bounded so a template that never returns cannot block the AMCP queue.
+    // The future holds the value returned by the template; if the call failed, get() throws and the command
+    // is answered with an error. Waiting is bounded so a template that never returns cannot block the AMCP queue.
     auto result  = producer_->call({javascript, INVOKE_RETURN_PARAM});
     auto timeout = invoke_timeout();
     if (result.wait_for(timeout) == std::future_status::timeout) {

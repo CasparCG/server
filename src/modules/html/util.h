@@ -30,10 +30,8 @@ namespace caspar::html {
 
 const std::string REMOVE_MESSAGE_NAME        = "CasparCGRemove";
 const std::string LOG_MESSAGE_NAME           = "CasparCGLog";
-const std::string INVOKE_RESULT_MESSAGE_NAME = "CasparCGInvokeResult";
-
-// Global function the renderer exposes to the page for reporting the result of a CG INVOKE
-const std::string INVOKE_RESULT_FUNCTION_NAME = "__casparcgInvokeResult";
+const std::string INVOKE_MESSAGE_NAME        = "CasparCGInvoke";       // browser -> renderer: (id, code)
+const std::string INVOKE_RESULT_MESSAGE_NAME = "CasparCGInvokeResult"; // renderer -> browser: (id, result, error)
 
 // Extra parameter of frame_producer::call() asking the html producer to return the javascript result
 const std::wstring INVOKE_RETURN_PARAM = L"RETURN";
