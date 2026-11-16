@@ -338,13 +338,21 @@ class html_client
             result                            = entry.promise.get_future();
         }
 
-        // Every request expires on its own, so neither CG INVOKE nor CALL ... RETURN can wait longer than the
-        // timeout, even if the template never settles its promise
-        const auto            timeout = invoke_timeout();
-        CefRefPtr<html_client> self(this);
-        html::begin_invoke_after([self, id, timeout] { self->expire_invoke(id, timeout); }, timeout);
+        try {
+            // Every request expires on its own, so neither CG INVOKE nor CALL ... RETURN can wait longer than the
+            // timeout, even if the template never settles its promise
+            const auto             timeout = invoke_timeout();
+            CefRefPtr<html_client> self(this);
+            html::begin_invoke_after([self, id, timeout] { self->expire_invoke(id, timeout); }, timeout);
 
-        queue_or_run({id, javascript});
+            queue_or_run({id, javascript});
+        } catch (...) {
+            // CEF did not take the task (e.g. it is shutting down): the call will not run, so the request must
+            // not stay registered. The command fails with the exception.
+            std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
+            pending_invokes_.erase(id);
+            throw;
+        }
         return result;
     }
 
@@ -683,7 +691,9 @@ class html_client
         pending_invokes_.clear();
     }
 
-    // Resolves a request that got no result in time with an empty string
+    // Resolves a request that got no result in time with an empty string. The timeout bounds how long the client
+    // waits, not the call itself: a call still queued because the page has not loaded runs once it has, as an
+    // INVOKE before load always did, and a call already running in the page cannot be cancelled.
     void expire_invoke(const std::string& id, std::chrono::milliseconds timeout)
     {
         std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
@@ -691,8 +701,10 @@ class html_client
         if (it == pending_invokes_.end())
             return;
 
+        const bool queued = !loaded_ && !not_found_;
         CASPAR_LOG(warning) << print() << L" " << it->second.javascript << L" did not return within "
-                            << timeout.count() << L" ms";
+                            << timeout.count() << L" ms"
+                            << (queued ? L"; the page has not loaded yet, the call will run when it has" : L"");
         it->second.promise.set_value(std::wstring());
         pending_invokes_.erase(it);
     }
