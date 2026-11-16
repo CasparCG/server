@@ -39,6 +39,33 @@ AMCPCommandQueue::AMCPCommandQueue(const std::wstring&                          
 
 AMCPCommandQueue::~AMCPCommandQueue() {}
 
+// Maps the exception currently being handled to the AMCP error reply and logs it. Used for a command that fails
+// while executing and for one whose deferred result fails, so both report the same codes.
+std::wstring error_reply_for_current_exception(const std::wstring& name)
+{
+    try {
+        throw;
+    } catch (file_not_found&) {
+        CASPAR_LOG(error) << " File not found.";
+        return L"404 " + name + L" FAILED\r\n";
+    } catch (expected_user_error&) {
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (user_error&) {
+        CASPAR_LOG(error) << " Check syntax.";
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (std::out_of_range&) {
+        CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+        return L"402 " + name + L" FAILED\r\n";
+    } catch (boost::bad_lexical_cast&) {
+        CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (...) {
+        CASPAR_LOG_CURRENT_EXCEPTION();
+        CASPAR_LOG(error) << "Failed to execute command: " << name;
+        return L"501 " + name + L" FAILED\r\n";
+    }
+}
+
 std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         cmd,
                            const spl::shared_ptr<std::vector<channel_context>>& channels,
                            bool                                                 reply_without_req_id)
@@ -58,12 +85,8 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
                 bool         succeeded = true;
                 try {
                     reply = res.get();
-                } catch (expected_user_error&) {
-                    reply     = L"403 " + name + L" FAILED\r\n";
-                    succeeded = false;
                 } catch (...) {
-                    CASPAR_LOG_CURRENT_EXCEPTION();
-                    reply     = L"501 " + name + L" FAILED\r\n";
+                    reply     = error_reply_for_current_exception(name);
                     succeeded = false;
                 }
                 cmd->SendReply(reply, reply_without_req_id);
@@ -72,24 +95,8 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
                 return succeeded;
             });
 
-        } catch (file_not_found&) {
-            CASPAR_LOG(error) << " File not found.";
-            cmd->SendReply(L"404 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
-        } catch (expected_user_error&) {
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
-        } catch (user_error&) {
-            CASPAR_LOG(error) << " Check syntax.";
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
-        } catch (std::out_of_range&) {
-            CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
-            cmd->SendReply(L"402 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
-        } catch (boost::bad_lexical_cast&) {
-            CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
-            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
         } catch (...) {
-            CASPAR_LOG_CURRENT_EXCEPTION();
-            CASPAR_LOG(error) << "Failed to execute command: " << cmd->name();
-            cmd->SendReply(L"501 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+            cmd->SendReply(error_reply_for_current_exception(cmd->name()), reply_without_req_id);
         }
 
     } catch (...) {
