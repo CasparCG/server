@@ -108,6 +108,17 @@ class state
         data_ = other.data_;
         return *this;
     }
+    // The declared copy operations would otherwise suppress these, making every
+    // std::move of a state a silent copy that leaves the source populated.
+    state(state&& other) noexcept            = default;
+    state& operator=(state&& other) noexcept = default;
+
+    void merge(const state& other)
+    {
+        for (const auto& p : other.data_) {
+            data_[p.first] = p.second;
+        }
+    }
 
     template <typename T>
     state_proxy operator[](const T& key)

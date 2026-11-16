@@ -191,7 +191,11 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>
 
             // TODO: time_++ is a hack. Use proper channel time.
             bundle_time_ = time_++;
-            bundle_      = state;
+
+            // Each channel publishes from its own thread, so replacing the pending bundle
+            // drops what the others queued since the last send. Channels do not share
+            // addresses, so merging keeps all of them.
+            bundle_.merge(state);
         }
         cond_.notify_all();
     }
