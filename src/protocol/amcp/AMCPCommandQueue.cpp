@@ -39,8 +39,8 @@ AMCPCommandQueue::AMCPCommandQueue(const std::wstring&                          
 
 AMCPCommandQueue::~AMCPCommandQueue() {}
 
-// Maps the exception currently being handled to the AMCP error reply and logs it. Used for a command that fails
-// while executing and for one whose deferred result fails, so both report the same codes.
+// Maps the exception currently being handled to the AMCP error reply and logs it, for a command whose deferred
+// result fails. Mirrors the catch handlers in exec_cmd, so the command reports the same code either way.
 std::wstring error_reply_for_current_exception(const std::wstring& name)
 {
     try {
@@ -95,8 +95,24 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
                 return succeeded;
             });
 
+        } catch (file_not_found&) {
+            CASPAR_LOG(error) << " File not found.";
+            cmd->SendReply(L"404 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+        } catch (expected_user_error&) {
+            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+        } catch (user_error&) {
+            CASPAR_LOG(error) << " Check syntax.";
+            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+        } catch (std::out_of_range&) {
+            CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+            cmd->SendReply(L"402 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
+        } catch (boost::bad_lexical_cast&) {
+            CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
+            cmd->SendReply(L"403 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
         } catch (...) {
-            cmd->SendReply(error_reply_for_current_exception(cmd->name()), reply_without_req_id);
+            CASPAR_LOG_CURRENT_EXCEPTION();
+            CASPAR_LOG(error) << "Failed to execute command: " << cmd->name();
+            cmd->SendReply(L"501 " + cmd->name() + L" FAILED\r\n", reply_without_req_id);
         }
 
     } catch (...) {
