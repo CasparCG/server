@@ -159,6 +159,7 @@ class html_client
     mutable std::mutex                   audio_frames_mutex_;
     const size_t                         frames_max_size_ = 4;
     std::atomic<bool>                    closing_;
+    bool                                 reloading_ = false; // CEF UI thread only
 
     std::unique_ptr<ffmpeg::AudioResampler> audioResampler_;
 
@@ -222,8 +223,14 @@ class html_client
     void reload()
     {
         html::begin_invoke([this] {
-            if (browser_ != nullptr)
+            if (browser_ != nullptr) {
+                // While the page reloads, scripts and INVOKE calls wait in the queue as before the first load, and
+                // calls sent to the old page are answered now instead of waiting for the timeout
+                loaded_    = false;
+                reloading_ = true;
+                resolve_pending_invokes();
                 browser_->Reload();
+            }
         });
     }
 
@@ -604,6 +611,19 @@ class html_client
 
         loaded_ = true;
         execute_queued_javascript();
+    }
+
+    // A reload that ends without OnLoadEnd (e.g. aborted, the old page stays) must not leave scripts queued
+    void OnLoadingStateChange(CefRefPtr<CefBrowser> browser, bool isLoading, bool canGoBack, bool canGoForward) override
+    {
+        if (isLoading || !reloading_)
+            return;
+
+        reloading_ = false;
+        if (!loaded_ && !not_found_) {
+            loaded_ = true;
+            execute_queued_javascript();
+        }
     }
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser>        browser,
