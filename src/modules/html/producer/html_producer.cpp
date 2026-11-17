@@ -347,7 +347,7 @@ class html_client
 
         try {
             // Every request expires on its own, so neither CG INVOKE nor CALL ... RETURN can wait longer than the
-            // timeout, even if the template never settles its promise
+            // timeout, even if a synchronous call hangs (promises are not awaited, see INVOKE_FINISH_SCRIPT)
             const auto             timeout = invoke_timeout();
             CefRefPtr<html_client> self(this);
             html::begin_invoke_after([self, id, timeout] { self->expire_invoke(id, timeout); }, timeout);
@@ -731,8 +731,9 @@ class html_client
         complete_invoke(id, std::move(result), error);
     }
 
-    // A failed call (exception, rejected promise) fails the CG INVOKE command instead of replying with an empty
-    // value, so the client can tell it from a function that returned nothing
+    // A failed call (the synchronous call throws) fails the CG INVOKE command instead of replying with an empty
+    // value, so the client can tell it from a function that returned nothing. A returned promise is reported as
+    // empty right away and its rejection is not reported (see INVOKE_FINISH_SCRIPT).
     void complete_invoke(const std::string& id, std::wstring result, const std::wstring& error)
     {
         std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
