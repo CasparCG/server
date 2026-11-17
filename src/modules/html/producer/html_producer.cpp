@@ -328,6 +328,13 @@ class html_client
         if (closing_ || not_found_)
             return make_ready_future(std::wstring());
 
+        // Before the page has loaded, reply right away and run the call once it has, as INVOKE always did, so the
+        // AMCP queue of the channel (shared by all clients) never waits for a page to load
+        if (!loaded_) {
+            execute_javascript(javascript);
+            return make_ready_future(std::wstring());
+        }
+
         const auto id = std::to_string(++invoke_counter_);
 
         std::future<std::wstring> result;
@@ -691,9 +698,8 @@ class html_client
         pending_invokes_.clear();
     }
 
-    // Resolves a request that got no result in time with an empty string. The timeout bounds how long the client
-    // waits, not the call itself: a call still queued because the page has not loaded runs once it has, as an
-    // INVOKE before load always did, and a call already running in the page cannot be cancelled.
+    // Resolves a request that got no result in time (a synchronous call that hangs) with an empty string. The
+    // timeout bounds how long the client waits; a call already running in the page cannot be cancelled.
     void expire_invoke(const std::string& id, std::chrono::milliseconds timeout)
     {
         std::lock_guard<std::mutex> lock(pending_invokes_mutex_);
@@ -701,10 +707,8 @@ class html_client
         if (it == pending_invokes_.end())
             return;
 
-        const bool queued = !loaded_ && !not_found_;
         CASPAR_LOG(warning) << print() << L" " << it->second.javascript << L" did not return within "
-                            << timeout.count() << L" ms"
-                            << (queued ? L"; the page has not loaded yet, the call will run when it has" : L"");
+                            << timeout.count() << L" ms";
         it->second.promise.set_value(std::wstring());
         pending_invokes_.erase(it);
     }

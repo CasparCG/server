@@ -175,21 +175,23 @@ class invoke_result_handler : public CefV8Handler
     IMPLEMENT_REFCOUNTING(invoke_result_handler);
 };
 
-// Awaits the value of a CG INVOKE call (it may be a promise) and reports it as a string: strings as they are,
-// other values as JSON, undefined as an empty string. Compiled by the embedder, so it is not subject to the
-// page's Content Security Policy.
+// Reports the value of a CG INVOKE call as a string: strings as they are, other values as JSON, undefined as an
+// empty string. A promise is not awaited: it is reported as empty right away and runs on in the page, so the AMCP
+// queue of the channel (shared by all clients) never waits for asynchronous work. Compiled by the embedder, so it
+// is not subject to the page's Content Security Policy.
 const char* const INVOKE_FINISH_SCRIPT = R"((function (id, value, report) {
-    var fail = function (e) { report(id, '', String(e) || 'CG INVOKE failed'); };
-    Promise.resolve(value).then(function (v) {
-        var result;
-        try {
-            result = v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
-        } catch (e) {
-            fail(e);
-            return;
-        }
-        report(id, result === undefined ? '' : result, '');
-    }, fail);
+    if (value && typeof value.then === 'function') {
+        report(id, '', '');
+        return;
+    }
+    var result;
+    try {
+        result = value === undefined ? '' : typeof value === 'string' ? value : JSON.stringify(value);
+    } catch (e) {
+        report(id, '', String(e) || 'CG INVOKE failed');
+        return;
+    }
+    report(id, result === undefined ? '' : result, '');
 }))";
 
 class renderer_application
