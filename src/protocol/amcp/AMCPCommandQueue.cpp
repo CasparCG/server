@@ -60,7 +60,13 @@ std::wstring error_reply_for_current_exception(const std::wstring& name)
         CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
         return L"403 " + name + L" FAILED\r\n";
     } catch (...) {
-        CASPAR_LOG_CURRENT_EXCEPTION();
+        // Without get_stack_trace() (as in CASPAR_LOG_CURRENT_EXCEPTION): it would show this reply thread, not where
+        // the exception was thrown, and resolving it takes about a second while the channel's queue waits. The
+        // diagnostic information already includes the stack trace captured at the throw.
+        try {
+            CASPAR_LOG(error) << L"Exception: " << caspar::u16(log::current_exception_diagnostic_information());
+        } catch (...) {
+        }
         CASPAR_LOG(error) << "Failed to execute command: " << name;
         return L"501 " + name + L" FAILED\r\n";
     }
