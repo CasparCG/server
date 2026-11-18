@@ -21,17 +21,27 @@
 
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <future>
 #include <string>
 
 namespace caspar::html {
 
-const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
-const std::string LOG_MESSAGE_NAME    = "CasparCGLog";
+const std::string REMOVE_MESSAGE_NAME        = "CasparCGRemove";
+const std::string LOG_MESSAGE_NAME           = "CasparCGLog";
+const std::string INVOKE_MESSAGE_NAME        = "CasparCGInvoke";       // browser -> renderer: (id, code)
+const std::string INVOKE_RESULT_MESSAGE_NAME = "CasparCGInvokeResult"; // renderer -> browser: (id, result, error)
+
+// Extra parameter of frame_producer::call() asking the html producer to return the javascript result
+const std::wstring INVOKE_RETURN_PARAM = L"RETURN";
+
+// How long CG INVOKE waits for the template to return a value (configuration.html.invoke-timeout)
+std::chrono::milliseconds invoke_timeout();
 
 void              invoke(const std::function<void()>& func);
 std::future<void> begin_invoke(const std::function<void()>& func);
+void              begin_invoke_after(const std::function<void()>& func, std::chrono::milliseconds delay);
 
 std::pair<bool, bool> is_gpu_shared_texture_enabled();
 

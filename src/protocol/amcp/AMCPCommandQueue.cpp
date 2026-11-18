@@ -39,6 +39,33 @@ AMCPCommandQueue::AMCPCommandQueue(const std::wstring&                          
 
 AMCPCommandQueue::~AMCPCommandQueue() {}
 
+// Maps the exception currently being handled to the AMCP error reply and logs it, for a command whose deferred
+// result fails. Mirrors the catch handlers in exec_cmd, so the command reports the same code either way.
+std::wstring error_reply_for_current_exception(const std::wstring& name)
+{
+    try {
+        throw;
+    } catch (file_not_found&) {
+        CASPAR_LOG(error) << " File not found.";
+        return L"404 " + name + L" FAILED\r\n";
+    } catch (expected_user_error&) {
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (user_error&) {
+        CASPAR_LOG(error) << " Check syntax.";
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (std::out_of_range&) {
+        CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+        return L"402 " + name + L" FAILED\r\n";
+    } catch (boost::bad_lexical_cast&) {
+        CASPAR_LOG(error) << L"Invalid parameter. Check syntax.";
+        return L"403 " + name + L" FAILED\r\n";
+    } catch (...) {
+        CASPAR_LOG_CURRENT_EXCEPTION();
+        CASPAR_LOG(error) << "Failed to execute command: " << name;
+        return L"501 " + name + L" FAILED\r\n";
+    }
+}
+
 std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         cmd,
                            const spl::shared_ptr<std::vector<channel_context>>& channels,
                            bool                                                 reply_without_req_id)
@@ -52,10 +79,20 @@ std::future<bool> exec_cmd(std::shared_ptr<AMCPCommand>                         
 
             auto res = cmd->Execute(channels).share();
             return std::async(std::launch::async, [cmd, res, reply_without_req_id, timer, name]() -> bool {
-                cmd->SendReply(res.get(), reply_without_req_id);
+                // A deferred result can fail too (e.g. CALL on a producer); the client must still get a reply,
+                // and a batch must count the command as failed, as with a synchronous failure
+                std::wstring reply;
+                bool         succeeded = true;
+                try {
+                    reply = res.get();
+                } catch (...) {
+                    reply     = error_reply_for_current_exception(name);
+                    succeeded = false;
+                }
+                cmd->SendReply(reply, reply_without_req_id);
 
                 CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << name;
-                return true;
+                return succeeded;
             });
 
         } catch (file_not_found&) {
