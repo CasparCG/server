@@ -39,6 +39,7 @@ set(HEADERS
 		os/thread.h
 
 		array.h
+		audio_ring_buffer.h
 		assert.h
 		base64.h
 		endian.h

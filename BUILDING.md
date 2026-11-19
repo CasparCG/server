@@ -92,6 +92,76 @@ If all goes to plan, a folder called 'staging' has been created with everything 
 
 -DENABLE_HTML=OFF - useful if you lack CEF, and would like to build without that module.
 
+-DENABLE_PROAUDIO=ON - enable the optional PortAudio multi-channel audio producer and consumer (default OFF).
+On Linux, install the PortAudio development package (`portaudio19-dev` on Ubuntu).
+Windows builds fetch PortAudio automatically; optionally set `-DPROAUDIO_ASIO_SDK_PATH`
+to a locally obtained ASIO SDK root to enable ASIO.
+The current PortAudio device streams use signed 16-bit PCM; engine mapping and
+matrix processing use signed 32-bit PCM. These review fixes do not change the
+device sample format or add higher-resolution capture/output.
+
+The proaudio `BUFFER_SIZE` / `buffer-size` setting is clamped to 16..65536 frames when
+positive; otherwise the driver chooses the size. Initialization failures or stalled
+audio callbacks remove the consumer so the channel can fall back to another clock.
+
+-DBUILD_TESTING=ON - build the native route mapping and channel audio matrix PCM
+regression tests. Matrix processing uses the engine's PCM interface and requires
+no PortAudio hardware for these tests. Tests are OFF by default. With
+`ENABLE_PROAUDIO=ON`, `proaudio_tests` additionally exercises mocked device
+selection, map validation, concurrent library lifetime, playback clock cadence,
+and stale capture removal on startup/resume:
+
+```sh
+cmake --build build --target route_audio_mapping_tests audio_matrix_tests
+ctest --test-dir build --output-on-failure -L unit
+ctest --test-dir build --output-on-failure -L module
+```
+
+```sh
+cmake --build build --target proaudio_tests
+ctest --test-dir build --output-on-failure -L module
+```
+
+### Audio test tiers and harness compatibility
+
+These tests follow the tier names and locations proposed in the
+[CasparCG testing discussion](https://casparcgforum.org/t/ai-fatigue-turnround-times-of-prs-and-automated-tests/7632/8).
+Core tests live in `src/tests/`. `unit` covers route-map parsing/remapping and
+deterministic matrix PCM, gains, meters, cadence and FIFO logic.
+`module` runs headless channel/native-route integration with a fake image mixer,
+deterministic producers and a capturing consumer. It creates routes through the
+native producer factory and controls them through the stage, but does not test
+AMCP parsing. It is not a `compositor` test: no real OGL/Vulkan accelerator is
+exercised. No `e2e`, GPU, CEF or hardware test is registered, so none is silently
+skipped or presented as passing. Existing graphics libraries are link dependencies,
+not runtime accelerator requirements.
+
+ProAudio isolation tests live in `src/modules/proaudio/tests/` and use the
+`module` label. They exercise actual consumer code (and capture code on the
+producer branch) with mocked PortAudio functions; no device is opened.
+The PortAudio development dependency is needed to compile the module/tests, not
+physical hardware. These white-box regressions currently include implementation
+files and call the producer/consumer directly; they do not yet use a shared
+registry-based producer/consumer harness. Expected initialization errors are
+asserted through failure state; unexpected background errors are not
+automatically intercepted.
+
+Both tier commands are non-interactive and return failure exit codes. Every CTest
+case has a 60-second process timeout covering setup, execution and teardown.
+Failure output is available with `--output-on-failure`; full runner output is in
+`build/Testing/Temporary/LastTest.log`. Controlled source-stall waits also have
+five-second deadlines. Keep the regression tests committed with the behavior
+they verify; do not delete or weaken them without explicitly documenting why.
+
+This is alignment with the proposal, not the completed proposed harness. The
+repository does not yet provide GoogleTest or `caspar_test_support`. Per-call
+and destructor deadlines with thread-stack dumps, unexpected-background-log
+capture, automatic thread/frame/file-handle leak accounting, and standardized
+ASan/TSan jobs remain future shared infrastructure. Current checks do not claim
+those guarantees. Migrate these cases to that harness when it is available;
+real accelerator parity and installed-server AMCP tests belong in the
+`compositor` and pytest `e2e` tiers respectively.
+
 -DUSE_STATIC_BOOST=ON - (Linux only, default OFF) statically link against Boost.
 
 -DUSE_SYSTEM_CEF=OFF - (Linux only, default ON) use the version of CEF from your OS. This expects to be using builds from https://launchpad.net/~casparcg/+archive/ubuntu/ppa

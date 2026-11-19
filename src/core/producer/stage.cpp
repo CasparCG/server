@@ -200,6 +200,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
                 }
 
                 for (auto& p : frames) {
+                    result.layer_indices.push_back(p.first);
                     result.frames.push_back(p.second.foreground1);
                     if (is_interlaced)
                         result.frames2.push_back(p.second.foreground2);

@@ -43,11 +43,13 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/frame/frame_transform.h>
+#include <core/mixer/audio/audio_matrix.h>
 #include <core/mixer/mixer.h>
 #include <core/producer/cg_proxy.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame_producer_registry.h>
+#include <core/producer/route/route_audio_mapping.h>
 #include <core/producer/stage.h>
 #include <core/producer/transition/sting_producer.h>
 #include <core/producer/transition/transition_producer.h>
@@ -2102,6 +2104,43 @@ std::wstring osc_unsubscribe_command(command_context& ctx)
     return L"202 OSC UNSUBSCRIBE OK\r\n";
 }
 
+std::wstring mixer_audio_matrix_command(command_context& ctx)
+{
+    try {
+        if (ctx.layer_id >= 0) {
+            CASPAR_THROW_EXCEPTION(user_error()
+                                   << msg_info(L"AUDIO_MATRIX is a channel command, not a layer command."));
+        }
+        if (ctx.parameters.empty()) {
+            return L"201 MIXER OK\r\n" + ctx.channel.raw_channel->audio_matrix_state() + L"\r\n";
+        }
+        if (ctx.parameters.size() == 1 && boost::iequals(ctx.parameters.front(), L"DEFAULT")) {
+            ctx.channel.raw_channel->clear_audio_matrix();
+        } else {
+            if (ctx.parameters.size() != 2) {
+                CASPAR_THROW_EXCEPTION(user_error()
+                                       << msg_info(L"Use AUDIO_MATRIX destination inputs|SILENCE|DEFAULT."));
+            }
+            const auto destination = core::parse_route_audio_map_index(ctx.parameters[0]);
+            std::optional<std::vector<core::audio_matrix_source>> sources;
+            if (boost::iequals(ctx.parameters[1], L"SILENCE")) {
+                sources = std::vector<core::audio_matrix_source>{};
+            } else if (!boost::iequals(ctx.parameters[1], L"DEFAULT")) {
+                sources = core::parse_audio_matrix_sources(ctx.parameters[1]);
+            }
+            ctx.channel.raw_channel->configure_audio_matrix(destination, sources, get_channels(ctx));
+        }
+        return L"202 MIXER OK\r\n";
+    } catch (const std::invalid_argument& error) {
+        CASPAR_LOG(error) << "AUDIO_MATRIX: " << error.what();
+        return L"403 MIXER AUDIO_MATRIX Invalid destination index.\r\n";
+    } catch (const user_error& error) {
+        CASPAR_LOG(error) << "AUDIO_MATRIX: " << error.what();
+        const auto message = boost::get_error_info<msg_info_t>(error);
+        return L"403 MIXER AUDIO_MATRIX " + (message ? u16(*message) : L"Invalid parameters.") + L"\r\n";
+    }
+}
+
 void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
 {
     repo->register_channel_command(L"Basic Commands", L"LOADBG", loadbg_command, 1);
@@ -2161,6 +2200,7 @@ void register_commands(std::shared_ptr<amcp_command_repository_wrapper>& repo)
     repo->register_channel_command(L"Mixer Commands", L"MIXER ROTATION", mixer_rotation_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER PERSPECTIVE", mixer_perspective_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER VOLUME", mixer_volume_command, 0);
+    repo->register_channel_command(L"Mixer Commands", L"MIXER AUDIO_MATRIX", mixer_audio_matrix_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER MASTERVOLUME", mixer_mastervolume_command, 0);
     repo->register_channel_command(L"Mixer Commands", L"MIXER GRID", mixer_grid_command, 1);
     repo->register_channel_command(L"Mixer Commands", L"MIXER COMMIT", mixer_commit_command, 0);
