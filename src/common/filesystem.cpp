@@ -22,6 +22,7 @@
 
 #include "./os/filesystem.h"
 #include "filesystem.h"
+#include "locale.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/directory.hpp>
@@ -40,7 +41,7 @@ probe_path(const boost::filesystem::path&                             full_path,
         return {};
 
     auto dir = boost::filesystem::path(*parent);
-    auto loc = std::locale(""); // Use system locale
+    auto loc = safe_utf8_locale();
 
     auto leaf_name     = full_path.filename().stem().wstring();
     auto has_extension = !full_path.filename().extension().wstring().empty();
