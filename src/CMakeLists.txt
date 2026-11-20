@@ -14,6 +14,8 @@ set(CASPARCG_DOWNLOAD_MIRROR https://github.com/CasparCG/dependencies/releases/d
 set(CASPARCG_DOWNLOAD_CACHE ${CMAKE_CURRENT_BINARY_DIR}/external CACHE STRING "Download cache directory for cmake ExternalProjects")
 
 option(ENABLE_HTML "Enable HTML module, require CEF" ON)
+option(ENABLE_ULTRALIGHT "Enable Ultralight synchronous HTML module (requires separate SDK)" OFF)
+set(ULTRALIGHT_SDK_PATH "" CACHE PATH "Path to the Ultralight SDK root directory")
 
 set(DIAG_FONT_PATH "LiberationMono-Regular.ttf" CACHE STRING
     "Path to font that will be used to load diag font at runtime. By default

@@ -86,7 +86,7 @@ struct cg_producer_registry::impl
                    reusable_producer_instance};
 
         for (auto& extension : file_extensions) {
-            records_by_extension_.insert(std::make_pair(extension, rec));
+            records_by_extension_.insert_or_assign(extension, rec);
         }
     }
 
