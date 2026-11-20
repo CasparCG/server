@@ -35,6 +35,7 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
+#include "audio/audio_matrix.h"
 #include <queue>
 #include <unordered_map>
 #include <vector>
@@ -60,10 +61,11 @@ struct mixer::impl
     {
     }
 
-    const_frame operator()(std::vector<draw_frame>  frames,
-                           const video_format_desc& format_desc,
-                           int                      nb_samples,
-                           bool                     need_host_frame)
+    const_frame operator()(std::vector<draw_frame>    frames,
+                           const video_format_desc&   format_desc,
+                           int                        nb_samples,
+                           bool                       need_host_frame,
+                           const audio_matrix_config* matrix)
     {
         image_mixer_->update_aspect_ratio(static_cast<double>(format_desc.square_width) /
                                           static_cast<double>(format_desc.square_height));
@@ -75,7 +77,11 @@ struct mixer::impl
         }
 
         auto result = image_mixer_->render(format_desc, need_host_frame);
-        auto audio  = audio_mixer_(format_desc, nb_samples);
+        auto audio  = audio_mixer_(format_desc, nb_samples, matrix == nullptr);
+        if (matrix) {
+            audio = mix_audio_matrix(audio, format_desc, nb_samples, *matrix, audio_mixer_.get_master_volume());
+            audio_mixer_.update_meter(audio, format_desc.audio_channels);
+        }
 
         state_["audio"] = audio_mixer_.state();
 
@@ -117,12 +123,13 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 }
 void        mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float       mixer::get_master_volume() { return impl_->get_master_volume(); }
-const_frame mixer::operator()(std::vector<draw_frame>  frames,
-                              const video_format_desc& format_desc,
-                              int                      nb_samples,
-                              bool                     need_host_frame)
+const_frame mixer::operator()(std::vector<draw_frame>    frames,
+                              const video_format_desc&   format_desc,
+                              int                        nb_samples,
+                              bool                       need_host_frame,
+                              const audio_matrix_config* matrix)
 {
-    return (*impl_)(std::move(frames), format_desc, nb_samples, need_host_frame);
+    return (*impl_)(std::move(frames), format_desc, nb_samples, need_host_frame, matrix);
 }
 mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc)
 {

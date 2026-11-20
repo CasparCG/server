@@ -117,6 +117,14 @@ class array<const T> final
         storage_     = std::make_shared<std::any>(std::move(storage));
     }
 
+    array(std::vector<T>&& other)
+    {
+        auto storage = std::make_shared<std::vector<T>>(std::move(other));
+        ptr_         = storage->data();
+        size_        = storage->size();
+        storage_     = std::make_shared<std::any>(std::move(storage));
+    }
+
     template <typename S>
     explicit array(const T* ptr, std::size_t size, S&& storage)
         : ptr_(ptr)
