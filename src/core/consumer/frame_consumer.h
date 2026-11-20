@@ -44,6 +44,8 @@ class frame_consumer
     frame_consumer(const frame_consumer&);
     frame_consumer& operator=(const frame_consumer&);
 
+    std::wstring consumer_id_;
+
   public:
     static const spl::shared_ptr<frame_consumer>& empty();
 
@@ -62,6 +64,9 @@ class frame_consumer
     virtual bool         needs_host_frame() const { return true; }
     virtual bool         has_synchronization_clock() const { return false; }
     virtual int          index() const = 0;
+
+    const std::wstring&  consumer_id() const { return consumer_id_; }
+    virtual void         set_consumer_id(const std::wstring& id) { consumer_id_ = id; }
 };
 
 }} // namespace caspar::core
