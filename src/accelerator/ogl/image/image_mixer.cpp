@@ -428,7 +428,7 @@ void image_mixer::visit(const core::const_frame& frame) { impl_->visit(frame); }
 void image_mixer::pop() { impl_->pop(); }
 void image_mixer::update_aspect_ratio(double aspect_ratio) { impl_->update_aspect_ratio(aspect_ratio); }
 std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<core::texture>>>
-image_mixer::render(const core::video_format_desc& format_desc)
+image_mixer::render(const core::video_format_desc& format_desc, bool /*need_host_frame*/)
 {
     return impl_->render(format_desc);
 }

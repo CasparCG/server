@@ -60,7 +60,10 @@ struct mixer::impl
     {
     }
 
-    const_frame operator()(std::vector<draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
+    const_frame operator()(std::vector<draw_frame>  frames,
+                           const video_format_desc& format_desc,
+                           int                      nb_samples,
+                           bool                     need_host_frame)
     {
         image_mixer_->update_aspect_ratio(static_cast<double>(format_desc.square_width) /
                                           static_cast<double>(format_desc.square_height));
@@ -71,7 +74,7 @@ struct mixer::impl
             frame.accept(*image_mixer_);
         }
 
-        auto result = image_mixer_->render(format_desc);
+        auto result = image_mixer_->render(format_desc, need_host_frame);
         auto audio  = audio_mixer_(format_desc, nb_samples);
 
         state_["audio"] = audio_mixer_.state();
@@ -114,9 +117,12 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 }
 void        mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float       mixer::get_master_volume() { return impl_->get_master_volume(); }
-const_frame mixer::operator()(std::vector<draw_frame> frames, const video_format_desc& format_desc, int nb_samples)
+const_frame mixer::operator()(std::vector<draw_frame>  frames,
+                              const video_format_desc& format_desc,
+                              int                      nb_samples,
+                              bool                     need_host_frame)
 {
-    return (*impl_)(std::move(frames), format_desc, nb_samples);
+    return (*impl_)(std::move(frames), format_desc, nb_samples, need_host_frame);
 }
 mutable_frame mixer::create_frame(const void* tag, const pixel_format_desc& desc)
 {

@@ -49,7 +49,7 @@ class image_mixer
     virtual void update_aspect_ratio(double aspect_ratio) = 0;
 
     virtual std::future<std::tuple<array<const std::uint8_t>, std::shared_ptr<texture>>>
-    render(const struct video_format_desc& format_desc) = 0;
+    render(const struct video_format_desc& format_desc, bool need_host_frame) = 0;
 
     class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) override = 0;
     class mutable_frame create_frame(const void*                     video_stream_tag,

@@ -98,6 +98,7 @@ class destroy_consumer_proxy : public frame_consumer
     std::future<bool>    call(const std::vector<std::wstring>& params) override { return consumer_->call(params); }
     std::wstring         print() const override { return consumer_->print(); }
     std::wstring         name() const override { return consumer_->name(); }
+    bool                 needs_host_frame() const override { return consumer_->needs_host_frame(); }
     bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
     int                  index() const override { return consumer_->index(); }
     core::monitor::state state() const override { return consumer_->state(); }
@@ -134,6 +135,7 @@ class print_consumer_proxy : public frame_consumer
     std::future<bool>    call(const std::vector<std::wstring>& params) override { return consumer_->call(params); }
     std::wstring         print() const override { return consumer_->print(); }
     std::wstring         name() const override { return consumer_->name(); }
+    bool                 needs_host_frame() const override { return consumer_->needs_host_frame(); }
     bool                 has_synchronization_clock() const override { return consumer_->has_synchronization_clock(); }
     int                  index() const override { return consumer_->index(); }
     core::monitor::state state() const override { return consumer_->state(); }

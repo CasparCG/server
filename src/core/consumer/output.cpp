@@ -106,6 +106,16 @@ struct output::impl
         return consumers_.size();
     }
 
+    bool needs_host_frame()
+    {
+        std::lock_guard<std::mutex> lock(consumers_mutex_);
+        for (auto& [index, consumer] : consumers_) {
+            if (consumer->needs_host_frame())
+                return true;
+        }
+        return false;
+    }
+
     void operator()(const const_frame&             input_frame1,
                     const const_frame&             input_frame2,
                     const core::video_format_desc& format_desc)
@@ -167,10 +177,18 @@ struct output::impl
             consumers = consumers_;
         }
 
-        auto do_send = [this, &consumers](core::video_field field, const core::const_frame& frame) {
+        // Consumers added after this frame was mixed may need host data it does not carry.
+        const bool host_bytes = input_frame1.image_data(0).data() != nullptr &&
+                                (!input_frame2 || input_frame2.image_data(0).data() != nullptr);
+
+        auto do_send = [this, &consumers, host_bytes](core::video_field field, const core::const_frame& frame) {
             std::map<int, std::future<bool>> futures;
 
             for (auto it = consumers.begin(); it != consumers.end();) {
+                if (!host_bytes && it->second->needs_host_frame()) {
+                    ++it;
+                    continue;
+                }
                 try {
                     futures.emplace(it->first, it->second->send(field, frame));
                     ++it;
@@ -250,6 +268,7 @@ std::future<bool> output::call(int index, const std::vector<std::wstring>& param
     return impl_->call(index, params);
 }
 size_t output::consumer_count() const { return impl_->consumer_count(); }
+bool   output::needs_host_frame() const { return impl_->needs_host_frame(); }
 void   output::operator()(const const_frame& frame, const const_frame& frame2, const video_format_desc& format_desc)
 {
     return (*impl_)(frame, frame2, format_desc);
