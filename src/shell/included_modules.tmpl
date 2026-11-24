@@ -11,6 +11,10 @@ ${CASPARCG_MODULE_INCLUDE_STATEMENTS}
 
 namespace caspar {
 
+// See main(): must not carry a stack protector across the CEF zygote fork.
+#if defined(__GNUC__) && !defined(_WIN32)
+__attribute__((no_stack_protector))
+#endif
 static bool intercept_command_line_args(int argc, char** argv)
 {${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}
 	return false;
