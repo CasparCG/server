@@ -23,6 +23,7 @@ System Requirements
 ### Linux
 
  - Ubuntu 24.04 is recommended
+ - Fedora and EL10 (RHEL, Rocky Linux, AlmaLinux, CentOS Stream) have community-maintained RPM packages in the [noquierouser/casparcg COPR](https://copr.fedorainfracloud.org/coprs/noquierouser/casparcg/). These are not officially supported, please report packaging problems to the [packaging repository](https://codeberg.org/noquierouser/casparcg-copr)
  - Other distributions and releases will work but you will need to compile it yourself and have not been tested
 
 Getting Started
