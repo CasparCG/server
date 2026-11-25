@@ -78,6 +78,7 @@ struct newtek_ndi_consumer : public core::frame_consumer
     std::condition_variable              worker_cond_;
     bool                                 ready_for_frame_;
     std::queue<core::const_frame>        buffer_;
+    bool                                 stopping_ = false; // guarded by buffer_mutex_
     boost::thread                        send_thread;
     executor                             executor_;
 
@@ -112,6 +113,14 @@ struct newtek_ndi_consumer : public core::frame_consumer
 
     ~newtek_ndi_consumer()
     {
+        // The send thread blocks in std::condition_variable::wait, which is not a
+        // boost::thread interruption point: interrupt() alone never wakes it, and once
+        // the channel stops delivering frames join() waits forever. Wake it explicitly.
+        {
+            std::lock_guard<std::mutex> lock(buffer_mutex_);
+            stopping_ = true;
+        }
+        worker_cond_.notify_all();
         if (send_thread.joinable()) {
             send_thread.interrupt();
             send_thread.join();
@@ -219,7 +228,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
                 while (!send_thread.interruption_requested()) {
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        worker_cond_.wait(lock, [&] { return buffer_.size() > buffer_size; });
+                        worker_cond_.wait(lock, [&] { return stopping_ || buffer_.size() > buffer_size; });
+                        if (stopping_) {
+                            return;
+                        }
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
                         buffer_size = buffer_.size();
                         if (buffer_.size() >= 8) {
@@ -236,7 +248,10 @@ struct newtek_ndi_consumer : public core::frame_consumer
                     core::const_frame frame;
                     {
                         std::unique_lock<std::mutex> lock(buffer_mutex_);
-                        worker_cond_.wait(lock, [&] { return !buffer_.empty(); });
+                        worker_cond_.wait(lock, [&] { return stopping_ || !buffer_.empty(); });
+                        if (stopping_) {
+                            return;
+                        }
                         graph_->set_value("buffered-frames", static_cast<double>(buffer_.size() + 0.001) / 8);
                         frame = std::move(buffer_.front());
                         buffer_.pop();
