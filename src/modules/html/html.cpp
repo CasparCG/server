@@ -255,6 +255,11 @@ class renderer_application
     IMPLEMENT_REFCOUNTING(renderer_application);
 };
 
+// See main() in shell/main.cpp: must not carry a stack protector across the
+// CEF zygote fork.
+#if defined(__GNUC__) && !defined(_WIN32)
+__attribute__((no_stack_protector))
+#endif
 bool intercept_command_line(int argc, char** argv)
 {
 #ifdef _WIN32

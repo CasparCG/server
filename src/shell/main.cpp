@@ -188,6 +188,14 @@ void terminate_handler()
 
 } // namespace caspar
 
+// CEF subprocesses forked from Chromium's zygote get a new stack canary in the
+// child unless change-stack-guard-on-fork=disable takes effect. Every frame that was live across
+// that fork still holds the old canary, so returning through it with a stack
+// protector aborts with "stack smashing detected". Chromium and CEF's own
+// sample apps mark their entry points NO_STACK_PROTECTOR for this reason.
+#if defined(__GNUC__) && !defined(_WIN32)
+__attribute__((no_stack_protector))
+#endif
 int main(int argc, char** argv)
 {
     using namespace caspar;
