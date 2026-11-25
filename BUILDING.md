@@ -53,6 +53,8 @@ We only officially support Ubuntu LTS releases, other distros may work but often
 We currently document two approaches to building CasparCG. The recommended way is to use the `deb` packaging we have in the repository, but we only provide that for Ubuntu LTS releases.
 Other deb based distros can work with some tweaks to one of those, other distros will need something else which is not documented here.
 
+For Fedora and EL10 there is unofficial, community-maintained RPM packaging at https://codeberg.org/noquierouser/casparcg-copr, which also packages the CEF build that `USE_SYSTEM_CEF` expects. It is not maintained by the CasparCG team, but can be used as-is or as a starting point for other rpm based distros.
+
 We also provide a script to produce a build in docker, but this is not recommended unless absolutely necessary. The resulting builds are often rather brittle depending on where they are used.
 
 To perform a custom build, follow the Development steps below, and you may need to do some extra packaging steps, or install steps on the target systems.
