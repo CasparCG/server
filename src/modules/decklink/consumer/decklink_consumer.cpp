@@ -33,6 +33,7 @@
 
 #include <core/consumer/channel_info.h>
 #include <core/consumer/frame_consumer.h>
+#include <core/consumer/output_timeline.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -658,6 +659,14 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     std::queue<core::const_frame> buffer_;
     int                           buffer_capacity_ = channel_format_desc_.field_count;
 
+    // When each queued frame was handed over (output_timeline_now_ns), in buffer_ order, so that
+    // its whole handover-to-display delay is known when it is scheduled.
+    std::queue<std::int64_t> handed_over_ns_;
+    std::int64_t             popped_handed_over_ns_ = 0;
+
+    const std::shared_ptr<core::output_timeline> timeline_;
+    const int                                    port_index_;
+
     const int buffer_size_ = config_.buffer_depth(); // Minimum buffer-size 3.
 
     long long video_scheduled_ = 0;
@@ -681,13 +690,23 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
     std::shared_ptr<decklink_vanc> vanc_;
 
   public:
-    decklink_consumer(const configuration& config, core::video_format_desc channel_format_desc, int channel_index)
+    decklink_consumer(const configuration&                   config,
+                      core::video_format_desc                channel_format_desc,
+                      int                                    channel_index,
+                      std::shared_ptr<core::output_timeline> timeline,
+                      int                                    port_index)
         : channel_index_(channel_index)
         , config_(config)
         , format_strategy_(create_format_strategy(config))
         , channel_format_desc_(std::move(channel_format_desc))
         , decklink_format_desc_(get_decklink_format(config.primary, channel_format_desc_))
+        , timeline_(std::move(timeline))
+        , port_index_(port_index)
     {
+        if (timeline_ && !timeline_->claim(port_index_)) {
+            CASPAR_LOG(info) << print() << L" Another output already publishes the channel's output timing.";
+        }
+
         graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
         graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
         graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -809,6 +828,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
 
         secondary_port_contexts_.clear();
+
+        if (timeline_) {
+            timeline_->release(port_index_);
+        }
     }
 
     void wait_for_reference_lock()
@@ -945,12 +968,20 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
              * TODO - track how the secondaries are doing by comparing IDeckLinkOutput::GetScheduledStreamTime
              */
 
+            const bool publishes_timing = timeline_ && timeline_->is_publisher(port_index_);
+
             if (result == bmdOutputFrameDisplayedLate) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+                if (publishes_timing) {
+                    timeline_->late_frames.fetch_add(1);
+                }
                 video_scheduled_ += decklink_format_desc_.duration;
                 audio_scheduled_ += dframe->nb_samples();
             } else if (result == bmdOutputFrameDropped) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+                if (publishes_timing) {
+                    timeline_->dropped_frames.fetch_add(1);
+                }
             } else if (result == bmdOutputFrameFlushed) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "flushed-frame");
             }
@@ -969,7 +1000,8 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 }
             }
 
-            core::const_frame frame1 = pop();
+            core::const_frame frame1                = pop();
+            const auto        frame1_handed_over_ns = popped_handed_over_ns_;
             core::const_frame frame2;
 
             bool isInterlaced = mode_->GetFieldDominance() != bmdProgressiveFrame;
@@ -982,6 +1014,26 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 return E_FAIL;
 
             BMDTimeValue video_display_time = video_scheduled_;
+
+            // Publish how long this frame takes from handover to display: the time it has spent
+            // queued here plus how far its display slot is ahead of the card's playback position.
+            // An audio output on the same channel can measure its own delay from the same handover
+            // and hold the difference, independently of how deep either buffer is.
+            if (publishes_timing && frame1_handed_over_ns != 0) {
+                BMDTimeValue stream_time = 0;
+                double       speed       = 0.0;
+                if (SUCCEEDED(output_->GetScheduledStreamTime(
+                        decklink_format_desc_.time_scale, &stream_time, &speed)) &&
+                    speed > 0.0) {
+                    timeline_->video_delay_ns.store(core::handover_to_display_ns(core::output_timeline_now_ns(),
+                                                                                 frame1_handed_over_ns,
+                                                                                 video_display_time,
+                                                                                 stream_time,
+                                                                                 decklink_format_desc_.time_scale));
+                    timeline_->video_delay_updates.fetch_add(1);
+                }
+            }
+
             video_scheduled_ += decklink_format_desc_.duration;
 
             std::vector<std::int32_t> audio_data;
@@ -1043,6 +1095,10 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
             if (!abort_request_) {
                 frame = buffer_.front();
                 buffer_.pop();
+                if (!handed_over_ns_.empty()) {
+                    popped_handed_over_ns_ = handed_over_ns_.front();
+                    handed_over_ns_.pop();
+                }
             }
         }
         buffer_cond_.notify_all();
@@ -1105,7 +1161,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
         }
     }
 
-    bool send(core::video_field field, core::const_frame frame)
+    bool send(core::video_field field, core::const_frame frame, std::int64_t handed_over_ns)
     {
         {
             std::lock_guard<std::mutex> lock(exception_mutex_);
@@ -1121,6 +1177,7 @@ struct decklink_consumer final : public IDeckLinkVideoOutputCallback
                 buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
             }
             buffer_.push(std::move(frame));
+            handed_over_ns_.push(handed_over_ns);
         }
         buffer_cond_.notify_all();
 
@@ -1194,13 +1251,18 @@ struct decklink_consumer_proxy : public core::frame_consumer
         format_desc_ = format_desc;
         executor_.invoke([=, this] {
             consumer_.reset();
-            consumer_ = std::make_unique<decklink_consumer>(config_, format_desc, channel_info.index);
+            consumer_ = std::make_unique<decklink_consumer>(
+                config_, format_desc, channel_info.index, channel_info.timeline, port_index);
         });
     }
 
     std::future<bool> send(core::video_field field, core::const_frame frame) override
     {
-        return executor_.begin_invoke([=, this] { return consumer_->send(field, frame); });
+        // Stamp the handover here, on the channel's thread: the work below runs later on this
+        // output's own thread, after a wait for buffer space whose length depends only on how the
+        // channel and the card happen to be phased.
+        const auto handed_over_ns = core::output_timeline_now_ns();
+        return executor_.begin_invoke([=, this] { return consumer_->send(field, frame, handed_over_ns); });
     }
 
     std::future<bool> call(const std::vector<std::wstring>& params) override

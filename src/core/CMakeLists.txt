@@ -76,6 +76,7 @@ set(HEADERS
 		video_channel.h
 		video_format.h
 		consumer/channel_info.h
+		consumer/output_timeline.h
 )
 
 casparcg_add_library(core SOURCES ${SOURCES} ${HEADERS})
