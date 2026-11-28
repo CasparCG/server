@@ -23,6 +23,9 @@
 
 #include "../frame/pixel_format.h"
 #include "common/bit_depth.h"
+#include "output_timeline.h"
+
+#include <memory>
 
 namespace caspar::core {
 
@@ -38,6 +41,9 @@ struct channel_info
     int               index;
     common::bit_depth depth;
     color_space       default_color_space;
+
+    // Shared by every copy, so all consumers of the channel see the same instance.
+    std::shared_ptr<output_timeline> timeline = std::make_shared<output_timeline>();
 };
 
 } // namespace caspar::core
